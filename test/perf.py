@@ -70,7 +70,7 @@ TEST_LIBS = [Json]
 # py-bjdata
 
 try:
-    from bjdata import __version__ as ubj_version, dumpb as ubj_enc, loadb as ubj_dec
+    from bjdata import __version__ as bjd_version, dumpb as bjd_enc, loadb as bjd_dec
 except ImportError:
     print('Failed to import bjdata, ignoring')
 else:
@@ -78,21 +78,21 @@ else:
 
         @staticmethod
         def name():
-            return 'py-bjdata %s' % ubj_version
+            return 'py-bjdata %s' % bjd_version
 
         @staticmethod
         def encode(obj):
-            return ubj_enc(obj)
+            return bjd_enc(obj)
 
         @staticmethod
         def decode(obj):
-            return ubj_dec(obj)
+            return bjd_dec(obj)
     TEST_LIBS.append(PyUbjson)
 
 # simplebjdata
 
 try:
-    from simplebjdata import __version__ as subj_version, encode as subj_enc, decode as subj_dec
+    from simplebjdata import __version__ as sbjd_version, encode as sbjd_enc, decode as sbjd_dec
 except ImportError:
     print('Failed to import simplebjdata, ignoring')
 else:
@@ -100,15 +100,15 @@ else:
 
         @staticmethod
         def name():
-            return 'simplebjdata %s' % subj_version
+            return 'simplebjdata %s' % sbjd_version
 
         @staticmethod
         def encode(obj):
-            return subj_enc(obj)
+            return sbjd_enc(obj)
 
         @staticmethod
         def decode(obj):
-            val = subj_dec(obj)
+            val = sbjd_dec(obj)
             # ugly: decoder only returns iterator if object or array (and only know by name of generator which it is)
             if isinstance(val, GeneratorType):
                 if val.__name__ == 'array_stream':
