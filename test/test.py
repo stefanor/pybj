@@ -4,7 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     https://github.com/Iotic-Labs/py-ubjson/blob/master/LICENSE
+#     https://github.com/Iotic-Labs/py-bjdata/blob/master/LICENSE
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -22,15 +22,15 @@ from decimal import Decimal
 from struct import pack
 from collections import OrderedDict
 
-from ubjson import (dump as ubjdump, dumpb as ubjdumpb, load as ubjload, loadb as ubjloadb, EncoderException,
+from bjdata import (dump as ubjdump, dumpb as ubjdumpb, load as ubjload, loadb as ubjloadb, EncoderException,
                     DecoderException, EXTENSION_ENABLED)
-from ubjson.markers import (TYPE_NULL, TYPE_NOOP, TYPE_BOOL_TRUE, TYPE_BOOL_FALSE, TYPE_INT8, TYPE_UINT8, TYPE_INT16,
+from bjdata.markers import (TYPE_NULL, TYPE_NOOP, TYPE_BOOL_TRUE, TYPE_BOOL_FALSE, TYPE_INT8, TYPE_UINT8, TYPE_INT16,
                             TYPE_INT32, TYPE_INT64, TYPE_FLOAT32, TYPE_FLOAT64, TYPE_HIGH_PREC, TYPE_CHAR, TYPE_STRING,
                             OBJECT_START, OBJECT_END, ARRAY_START, ARRAY_END, CONTAINER_TYPE, CONTAINER_COUNT)
-from ubjson.compat import INTEGER_TYPES
+from bjdata.compat import INTEGER_TYPES
 # Pure Python versions
-from ubjson.encoder import dump as ubjpuredump, dumpb as ubjpuredumpb
-from ubjson.decoder import load as ubjpureload, loadb as ubjpureloadb
+from bjdata.encoder import dump as ubjpuredump, dumpb as ubjpuredumpb
+from bjdata.decoder import load as ubjpureload, loadb as ubjpureloadb
 
 PY2 = version_info[0] < 3
 
@@ -687,7 +687,7 @@ class TestEncodeDecodeFpExt(TestEncodeDecodeFp):
     def test_fp_seek_invalid(self):
         output = BytesIO()
         self.ubjdump({'a': 333, 'b': 444}, output)
-        # pad with data (non-ubjson) to ensure buffering too much data
+        # pad with data (non-bjdata) to ensure buffering too much data
         output.write(b' ' * 16)
         output.seek(0)
 

@@ -4,7 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     https://github.com/Iotic-Labs/py-ubjson/blob/master/LICENSE
+#     https://github.com/Iotic-Labs/py-bjdata/blob/master/LICENSE
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-"""Converts between json & ubjson"""
+"""Converts between json & bjdata"""
 
 from __future__ import print_function
 from sys import argv, stderr, stdout, stdin, exit  # pylint: disable=redefined-builtin
@@ -36,7 +36,7 @@ def from_json(in_stream, out_stream):
     try:
         ubjdump(obj, out_stream, sort_keys=True)
     except EncoderException as ex:
-        __error('Failed to encode to ubjson: %s' % ex)
+        __error('Failed to encode to bjdata: %s' % ex)
         return 16
     return 0
 
@@ -45,7 +45,7 @@ def to_json(in_stream, out_stream):
     try:
         obj = ubjload(in_stream, intern_object_keys=True)
     except DecoderException as ex:
-        __error('Failed to decode ubjson: %s' % ex)
+        __error('Failed to decode bjdata: %s' % ex)
         return 8
     try:
         jdump(obj, out_stream, sort_keys=True, separators=(',', ':'))
@@ -60,9 +60,9 @@ __ACTION = frozenset(('fromjson', 'tojson'))
 
 def main():
     if not (3 <= len(argv) <= 4 and argv[1] in __ACTION):
-        print("""USAGE: ubjson (fromjson|tojson) (INFILE|-) [OUTFILE]
+        print("""USAGE: bjdata (fromjson|tojson) (INFILE|-) [OUTFILE]
 
-Converts an objects between json and ubjson formats. Input is read from INFILE
+Converts an objects between json and bjdata formats. Input is read from INFILE
 unless set to '-', in which case stdin is used. If OUTFILE is not
 specified, output goes to stdout.""", file=stderr)
         return 1

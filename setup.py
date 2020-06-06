@@ -4,7 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     https://github.com/Iotic-Labs/py-ubjson/blob/master/LICENSE
+#     https://github.com/Iotic-Labs/py-bjdata/blob/master/LICENSE
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -33,7 +33,7 @@ from distutils.command.build_ext import build_ext
 from distutils.errors import CCompilerError
 from distutils.errors import DistutilsPlatformError, DistutilsExecError
 
-from ubjson import __version__ as version
+from bjdata import __version__ as version
 
 
 def load_description(filename):
@@ -72,7 +72,7 @@ COMPILE_ARGS = ['-std=c99', '-DUSE__BJDATA']
 #                  '-pedantic']
 
 setup(
-    name='py-ubjson',
+    name='py-bjdata',
     version=version,
     description='Universal Binary JSON encoder/decoder',
     long_description=load_description('README.md'),
@@ -81,9 +81,9 @@ setup(
     author_email='info@iotic-labs.com',
     maintainer='Iotic Labs Ltd',
     maintainer_email='vilnis.termanis@iotic-labs.com',
-    url='https://github.com/Iotic-Labs/py-ubjson',
+    url='https://github.com/Iotic-Labs/py-bjdata',
     license='Apache License 2.0',
-    packages=['ubjson'],
+    packages=['bjdata'],
     extras_require={
         'dev': [
             'Pympler>=0.7 ,<0.8',
@@ -92,13 +92,13 @@ setup(
     },
     zip_safe=False,
     ext_modules=([Extension(
-        '_ubjson',
+        '_bjdata',
         sorted(glob('src/*.c')),
         extra_compile_args=COMPILE_ARGS,
         # undef_macros=['NDEBUG']
     )] if BUILD_EXTENSIONS else []),
     cmdclass={"build_ext": BuildExtWarnOnFail},
-    keywords=['ubjson', 'ubj', 'jdata', 'bjd', 'jbat'],
+    keywords=['bjdata', 'ubj', 'jdata', 'bjd', 'jbat'],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: Apache Software License',

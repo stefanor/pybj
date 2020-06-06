@@ -4,7 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     https://github.com/Iotic-Labs/py-ubjson/blob/master/LICENSE
+#     https://github.com/Iotic-Labs/py-bjdata/blob/master/LICENSE
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -67,18 +67,18 @@ class Json(LibWrapper):
 
 TEST_LIBS = [Json]
 
-# py-ubjson
+# py-bjdata
 
 try:
-    from ubjson import __version__ as ubj_version, dumpb as ubj_enc, loadb as ubj_dec
+    from bjdata import __version__ as ubj_version, dumpb as ubj_enc, loadb as ubj_dec
 except ImportError:
-    print('Failed to import ubjson, ignoring')
+    print('Failed to import bjdata, ignoring')
 else:
     class PyUbjson(LibWrapper):
 
         @staticmethod
         def name():
-            return 'py-ubjson %s' % ubj_version
+            return 'py-bjdata %s' % ubj_version
 
         @staticmethod
         def encode(obj):
@@ -89,18 +89,18 @@ else:
             return ubj_dec(obj)
     TEST_LIBS.append(PyUbjson)
 
-# simpleubjson
+# simplebjdata
 
 try:
-    from simpleubjson import __version__ as subj_version, encode as subj_enc, decode as subj_dec
+    from simplebjdata import __version__ as subj_version, encode as subj_enc, decode as subj_dec
 except ImportError:
-    print('Failed to import simpleubjson, ignoring')
+    print('Failed to import simplebjdata, ignoring')
 else:
     class SimpleUbjson(LibWrapper):
 
         @staticmethod
         def name():
-            return 'simpleubjson %s' % subj_version
+            return 'simplebjdata %s' % subj_version
 
         @staticmethod
         def encode(obj):

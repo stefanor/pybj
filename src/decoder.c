@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     https://github.com/Iotic-Labs/py-ubjson/blob/master/LICENSE
+ *     https://github.com/Iotic-Labs/py-bjdata/blob/master/LICENSE
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -122,38 +122,38 @@ typedef struct {
     int invalid;
 } _container_params_t;
 
-static const char* _decoder_buffer_read_fixed(_ubjson_decoder_buffer_t *buffer, Py_ssize_t *len, char *dst_buffer);
-static const char* _decoder_buffer_read_callable(_ubjson_decoder_buffer_t *buffer, Py_ssize_t *len, char *dst_buffer);
-static const char* _decoder_buffer_read_buffered(_ubjson_decoder_buffer_t *buffer, Py_ssize_t *len, char *dst_buffer);
+static const char* _decoder_buffer_read_fixed(_bjdata_decoder_buffer_t *buffer, Py_ssize_t *len, char *dst_buffer);
+static const char* _decoder_buffer_read_callable(_bjdata_decoder_buffer_t *buffer, Py_ssize_t *len, char *dst_buffer);
+static const char* _decoder_buffer_read_buffered(_bjdata_decoder_buffer_t *buffer, Py_ssize_t *len, char *dst_buffer);
 
 //These functions return NULL on failure (an exception will have been set). Note that no type checking is performed!
 
-static PyObject* _decode_int8(_ubjson_decoder_buffer_t *buffer);
-static PyObject* _decode_int16_32(_ubjson_decoder_buffer_t *buffer, Py_ssize_t size);
-static PyObject* _decode_int64(_ubjson_decoder_buffer_t *buffer);
-static PyObject* _decode_float32(_ubjson_decoder_buffer_t *buffer);
-static PyObject* _decode_float64(_ubjson_decoder_buffer_t *buffer);
-static PyObject* _decode_high_prec(_ubjson_decoder_buffer_t *buffer);
-static long long _decode_int_non_negative(_ubjson_decoder_buffer_t *buffer, char *given_marker);
-static PyObject* _decode_char(_ubjson_decoder_buffer_t *buffer);
-static PyObject* _decode_string(_ubjson_decoder_buffer_t *buffer);
-static _container_params_t _get_container_params(_ubjson_decoder_buffer_t *buffer, int in_mapping);
+static PyObject* _decode_int8(_bjdata_decoder_buffer_t *buffer);
+static PyObject* _decode_int16_32(_bjdata_decoder_buffer_t *buffer, Py_ssize_t size);
+static PyObject* _decode_int64(_bjdata_decoder_buffer_t *buffer);
+static PyObject* _decode_float32(_bjdata_decoder_buffer_t *buffer);
+static PyObject* _decode_float64(_bjdata_decoder_buffer_t *buffer);
+static PyObject* _decode_high_prec(_bjdata_decoder_buffer_t *buffer);
+static long long _decode_int_non_negative(_bjdata_decoder_buffer_t *buffer, char *given_marker);
+static PyObject* _decode_char(_bjdata_decoder_buffer_t *buffer);
+static PyObject* _decode_string(_bjdata_decoder_buffer_t *buffer);
+static _container_params_t _get_container_params(_bjdata_decoder_buffer_t *buffer, int in_mapping);
 static int _is_no_data_type(char type);
 static PyObject* _no_data_type(char type);
-static PyObject* _decode_array(_ubjson_decoder_buffer_t *buffer);
-static PyObject* _decode_object_with_pairs_hook(_ubjson_decoder_buffer_t *buffer);
-static PyObject* _decode_object(_ubjson_decoder_buffer_t *buffer);
+static PyObject* _decode_array(_bjdata_decoder_buffer_t *buffer);
+static PyObject* _decode_object_with_pairs_hook(_bjdata_decoder_buffer_t *buffer);
+static PyObject* _decode_object(_bjdata_decoder_buffer_t *buffer);
 
 /******************************************************************************/
 
 /* Returns new decoder buffer or NULL on failure (an exception will be set). Input must either support buffer interface
  * or be callable. Currently only increases reference count for input parameter.
  */
-_ubjson_decoder_buffer_t* _ubjson_decoder_buffer_create(_ubjson_decoder_prefs_t* prefs, PyObject *input,
+_bjdata_decoder_buffer_t* _bjdata_decoder_buffer_create(_bjdata_decoder_prefs_t* prefs, PyObject *input,
                                                         PyObject *seek) {
-    _ubjson_decoder_buffer_t *buffer;
+    _bjdata_decoder_buffer_t *buffer;
 
-    if (NULL == (buffer = calloc(1, sizeof(_ubjson_decoder_buffer_t)))) {
+    if (NULL == (buffer = calloc(1, sizeof(_bjdata_decoder_buffer_t)))) {
         PyErr_NoMemory();
         return NULL;
     }
@@ -190,12 +190,12 @@ _ubjson_decoder_buffer_t* _ubjson_decoder_buffer_create(_ubjson_decoder_prefs_t*
     return buffer;
 
 bail:
-    _ubjson_decoder_buffer_free(&buffer);
+    _bjdata_decoder_buffer_free(&buffer);
     return NULL;
 }
 
 // Returns non-zero if buffer cleanup/finalisation failed and no other exception was set already
-int _ubjson_decoder_buffer_free(_ubjson_decoder_buffer_t **buffer) {
+int _bjdata_decoder_buffer_free(_bjdata_decoder_buffer_t **buffer) {
     int failed = 0;
 
     if (NULL != buffer && NULL != *buffer) {
@@ -244,7 +244,7 @@ int _ubjson_decoder_buffer_free(_ubjson_decoder_buffer_t **buffer) {
  *
  * This function reads from a fixed buffer (single byte array)
  */
-static const char* _decoder_buffer_read_fixed(_ubjson_decoder_buffer_t *buffer, Py_ssize_t *len, char *dst_buffer) {
+static const char* _decoder_buffer_read_fixed(_bjdata_decoder_buffer_t *buffer, Py_ssize_t *len, char *dst_buffer) {
     Py_ssize_t old_pos;
 
     if (0 == *len) {
@@ -269,7 +269,7 @@ static const char* _decoder_buffer_read_fixed(_ubjson_decoder_buffer_t *buffer, 
 }
 
 // See _decoder_buffer_read_fixed for behaviour details. This function is used to read from a stream
-static const char* _decoder_buffer_read_callable(_ubjson_decoder_buffer_t *buffer, Py_ssize_t *len, char *dst_buffer) {
+static const char* _decoder_buffer_read_callable(_bjdata_decoder_buffer_t *buffer, Py_ssize_t *len, char *dst_buffer) {
     PyObject* read_result = NULL;
 
     if (0 == *len) {
@@ -310,7 +310,7 @@ bail:
 }
 
 // See _decoder_buffer_read_fixed for behaviour details. This function reads (buffered) from a seekable stream
-static const char* _decoder_buffer_read_buffered(_ubjson_decoder_buffer_t *buffer, Py_ssize_t *len, char *dst_buffer) {
+static const char* _decoder_buffer_read_buffered(_bjdata_decoder_buffer_t *buffer, Py_ssize_t *len, char *dst_buffer) {
     Py_ssize_t old_pos;
     char *tmp_dst;
     Py_ssize_t remaining_old = 0; // how many bytes remaining to be read (from old view)
@@ -395,7 +395,7 @@ bail:
 
 // These methods are partially based on Python's _struct.c
 
-static PyObject* _decode_int8(_ubjson_decoder_buffer_t *buffer) {
+static PyObject* _decode_int8(_bjdata_decoder_buffer_t *buffer) {
     char value;
 
     READ_CHAR_OR_BAIL(value, "int8");
@@ -409,7 +409,7 @@ bail:
     return NULL;
 }
 
-static PyObject* _decode_uint8(_ubjson_decoder_buffer_t *buffer) {
+static PyObject* _decode_uint8(_bjdata_decoder_buffer_t *buffer) {
     char value;
 
     READ_CHAR_OR_BAIL(value, "uint8");
@@ -424,7 +424,7 @@ bail:
 }
 
 // NOTE: size parameter can only be 2 or 4 (bytes)
-static PyObject* _decode_int16_32(_ubjson_decoder_buffer_t *buffer, Py_ssize_t size) {
+static PyObject* _decode_int16_32(_bjdata_decoder_buffer_t *buffer, Py_ssize_t size) {
     const unsigned char *raw;
     long value = 0;
     Py_ssize_t i;
@@ -448,7 +448,7 @@ bail:
     return NULL;
 }
 
-static PyObject* _decode_int64(_ubjson_decoder_buffer_t *buffer) {
+static PyObject* _decode_int64(_bjdata_decoder_buffer_t *buffer) {
     const unsigned char *raw;
     long long value = 0;
     const Py_ssize_t size = 8;
@@ -474,7 +474,7 @@ bail:
 }
 
 // returns negative on error (exception set)
-static long long _decode_int_non_negative(_ubjson_decoder_buffer_t *buffer, char *given_marker) {
+static long long _decode_int_non_negative(_bjdata_decoder_buffer_t *buffer, char *given_marker) {
     char marker;
     PyObject *int_obj = NULL;
     long long value;
@@ -532,7 +532,7 @@ bail:
 }
 
 
-static PyObject* _decode_float32(_ubjson_decoder_buffer_t *buffer) {
+static PyObject* _decode_float32(_bjdata_decoder_buffer_t *buffer) {
     const char *raw;
     double value;
 
@@ -547,7 +547,7 @@ bail:
     return NULL;
 }
 
-static PyObject* _decode_float64(_ubjson_decoder_buffer_t *buffer) {
+static PyObject* _decode_float64(_bjdata_decoder_buffer_t *buffer) {
     const char *raw;
     double value;
 
@@ -562,7 +562,7 @@ bail:
     return NULL;
 }
 
-static PyObject* _decode_high_prec(_ubjson_decoder_buffer_t *buffer) {
+static PyObject* _decode_high_prec(_bjdata_decoder_buffer_t *buffer) {
     const char *raw;
     PyObject *num_str = NULL;
     PyObject *decimal;
@@ -582,7 +582,7 @@ bail:
     return NULL;
 }
 
-static PyObject* _decode_char(_ubjson_decoder_buffer_t *buffer) {
+static PyObject* _decode_char(_bjdata_decoder_buffer_t *buffer) {
     char value;
     PyObject *obj = NULL;
 
@@ -595,7 +595,7 @@ bail:
     return NULL;
 }
 
-static PyObject* _decode_string(_ubjson_decoder_buffer_t *buffer) {
+static PyObject* _decode_string(_bjdata_decoder_buffer_t *buffer) {
     long long length;
     const char *raw;
     PyObject *obj = NULL;
@@ -615,7 +615,7 @@ bail:
     return NULL;
 }
 
-static _container_params_t _get_container_params(_ubjson_decoder_buffer_t *buffer, int in_mapping) {
+static _container_params_t _get_container_params(_bjdata_decoder_buffer_t *buffer, int in_mapping) {
     _container_params_t params={0};
     char marker;
 
@@ -707,7 +707,7 @@ static PyObject* _no_data_type(char type) {
     }
 }
 
-static PyObject* _decode_array(_ubjson_decoder_buffer_t *buffer) {
+static PyObject* _decode_array(_bjdata_decoder_buffer_t *buffer) {
     _container_params_t params = _get_container_params(buffer, 0);
     PyObject *list = NULL;
     PyObject *value = NULL;
@@ -746,7 +746,7 @@ static PyObject* _decode_array(_ubjson_decoder_buffer_t *buffer) {
                     READ_CHAR_OR_BAIL(marker, "array value type marker (sized, after no-op)");
                     continue;
                 }
-                BAIL_ON_NULL(value = _ubjson_decode_value(buffer, &marker));
+                BAIL_ON_NULL(value = _bjdata_decode_value(buffer, &marker));
                 PyList_SET_ITEM(list, list_pos++, value);
                 // reference stolen by list so no longer want to decrement on failure
                 value = NULL;
@@ -764,7 +764,7 @@ static PyObject* _decode_array(_ubjson_decoder_buffer_t *buffer) {
                 READ_CHAR_OR_BAIL(marker, "array value type marker (after no-op)");
                 continue;
             }
-            BAIL_ON_NULL(value = _ubjson_decode_value(buffer, &marker));
+            BAIL_ON_NULL(value = _bjdata_decode_value(buffer, &marker));
             BAIL_ON_NONZERO(PyList_Append(list, value));
             Py_CLEAR(value);
 
@@ -783,7 +783,7 @@ bail:
 }
 
 // same as string, except there is no 'S' marker
-static PyObject* _decode_object_key(_ubjson_decoder_buffer_t *buffer, char marker, int intern) {
+static PyObject* _decode_object_key(_bjdata_decoder_buffer_t *buffer, char marker, int intern) {
     long long length;
     const char *raw;
     PyObject *key;
@@ -814,7 +814,7 @@ bail:
     }\
 }
 
-static PyObject* _decode_object_with_pairs_hook(_ubjson_decoder_buffer_t *buffer) {
+static PyObject* _decode_object_with_pairs_hook(_bjdata_decoder_buffer_t *buffer) {
     _container_params_t params = _get_container_params(buffer, 1);
     PyObject *obj = NULL;
     PyObject *list = NULL;
@@ -863,7 +863,7 @@ static PyObject* _decode_object_with_pairs_hook(_ubjson_decoder_buffer_t *buffer
                     continue;
                 }
                 DECODE_OBJECT_KEY_OR_RAISE_ENCODER_EXCEPTION("sized", intern);
-                BAIL_ON_NULL(value = _ubjson_decode_value(buffer, fixed_type));
+                BAIL_ON_NULL(value = _bjdata_decode_value(buffer, fixed_type));
                 BAIL_ON_NULL(item = PyTuple_Pack(2, key, value));
                 Py_CLEAR(key);
                 Py_CLEAR(value);
@@ -887,7 +887,7 @@ static PyObject* _decode_object_with_pairs_hook(_ubjson_decoder_buffer_t *buffer
                 continue;
             }
             DECODE_OBJECT_KEY_OR_RAISE_ENCODER_EXCEPTION("unsized", intern);
-            BAIL_ON_NULL(value = _ubjson_decode_value(buffer, fixed_type));
+            BAIL_ON_NULL(value = _bjdata_decode_value(buffer, fixed_type));
             BAIL_ON_NULL(item = PyTuple_Pack(2, key, value));
             Py_CLEAR(key);
             Py_CLEAR(value);
@@ -911,7 +911,7 @@ bail:
     return NULL;
 }
 
-static PyObject* _decode_object(_ubjson_decoder_buffer_t *buffer) {
+static PyObject* _decode_object(_bjdata_decoder_buffer_t *buffer) {
     _container_params_t params = _get_container_params(buffer, 1);
     PyObject *obj = NULL;
     PyObject *newobj = NULL; // result of object_hook (if applicable)
@@ -953,7 +953,7 @@ static PyObject* _decode_object(_ubjson_decoder_buffer_t *buffer) {
                 continue;
             }
             DECODE_OBJECT_KEY_OR_RAISE_ENCODER_EXCEPTION("sized/unsized", intern);
-            BAIL_ON_NULL(value = _ubjson_decode_value(buffer, fixed_type));
+            BAIL_ON_NULL(value = _bjdata_decode_value(buffer, fixed_type));
             BAIL_ON_NONZERO(PyDict_SetItem(obj, key, value));
             Py_CLEAR(key);
             Py_CLEAR(value);
@@ -984,7 +984,7 @@ bail:
 
 /******************************************************************************/
 
-// only used by _ubjson_decode_value
+// only used by _bjdata_decode_value
 #define RETURN_OR_RAISE_DECODER_EXCEPTION(item, item_str) {\
     obj = (item);\
     if (NULL != obj) {\
@@ -996,7 +996,7 @@ bail:
     }\
 }
 
-PyObject* _ubjson_decode_value(_ubjson_decoder_buffer_t *buffer, char *given_marker) {
+PyObject* _bjdata_decode_value(_bjdata_decoder_buffer_t *buffer, char *given_marker) {
     char marker;
     PyObject *obj;
 
@@ -1042,12 +1042,12 @@ PyObject* _ubjson_decode_value(_ubjson_decoder_buffer_t *buffer, char *given_mar
         case TYPE_HIGH_PREC:
             RETURN_OR_RAISE_DECODER_EXCEPTION(_decode_high_prec(buffer), "highprec");
         case ARRAY_START:
-            RECURSE_AND_RETURN_OR_BAIL(_decode_array(buffer), "whilst decoding a UBJSON array");
+            RECURSE_AND_RETURN_OR_BAIL(_decode_array(buffer), "whilst decoding a BJData array");
         case OBJECT_START:
             if (NULL == buffer->prefs.object_pairs_hook) {
-                RECURSE_AND_RETURN_OR_BAIL(_decode_object(buffer), "whilst decoding a UBJSON object");
+                RECURSE_AND_RETURN_OR_BAIL(_decode_object(buffer), "whilst decoding a BJData object");
             } else {
-                RECURSE_AND_RETURN_OR_BAIL(_decode_object_with_pairs_hook(buffer), "whilst decoding a UBJSON object");
+                RECURSE_AND_RETURN_OR_BAIL(_decode_object_with_pairs_hook(buffer), "whilst decoding a BJData object");
             }
         default:
             RAISE_DECODER_EXCEPTION("Invalid marker");
@@ -1059,7 +1059,7 @@ bail:
 
 /******************************************************************************/
 
-int _ubjson_decoder_init(void) {
+int _bjdata_decoder_init(void) {
     PyObject *tmp_module = NULL;
     PyObject *tmp_obj = NULL;
 
@@ -1067,7 +1067,7 @@ int _ubjson_decoder_init(void) {
     _pyfuncs_ubj_detect_formats();
 
     // allow decoder to access DecoderException & Decimal class
-    BAIL_ON_NULL(tmp_module = PyImport_ImportModule("ubjson.decoder"));
+    BAIL_ON_NULL(tmp_module = PyImport_ImportModule("bjdata.decoder"));
     BAIL_ON_NULL(DecoderException = PyObject_GetAttrString(tmp_module, "DecoderException"));
     Py_CLEAR(tmp_module);
 
@@ -1091,7 +1091,7 @@ bail:
 }
 
 
-void _ubjson_decoder_cleanup(void) {
+void _bjdata_decoder_cleanup(void) {
     Py_CLEAR(DecoderException);
     Py_CLEAR(PyDec_Type);
 }

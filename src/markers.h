@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     https://github.com/Iotic-Labs/py-ubjson/blob/master/LICENSE
+ *     https://github.com/Iotic-Labs/py-bjdata/blob/master/LICENSE
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,7 +20,7 @@
 extern "C" {
 #endif
 
-#define TYPE_NONE '\0' // Used internally only, not part of ubjson specification
+#define TYPE_NONE '\0' // Used internally only, not part of bjdata specification
 #define TYPE_NULL 'Z'
 #define TYPE_NOOP 'N'
 #define TYPE_BOOL_TRUE 'T'

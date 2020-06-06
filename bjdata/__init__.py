@@ -4,7 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     https://github.com/Iotic-Labs/py-ubjson/blob/master/LICENSE
+#     https://github.com/Iotic-Labs/py-bjdata/blob/master/LICENSE
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,16 +18,16 @@
 Example usage:
 
 # To encode
-encoded = ubjson.dumpb({'a': 1})
+encoded = bjdata.dumpb({'a': 1})
 
 # To decode
-decoded = ubjson.loadb(encoded)
+decoded = bjdata.loadb(encoded)
 
 To use a file-like object as input/output, use dump() & load() methods instead.
 """
 
 try:
-    from _ubjson import dump, dumpb, load, loadb
+    from _bjdata import dump, dumpb, load, loadb
     EXTENSION_ENABLED = True
 except ImportError:  # pragma: no cover
     from .encoder import dump, dumpb
