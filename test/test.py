@@ -25,8 +25,9 @@ from collections import OrderedDict
 from bjdata import (dump as bjddump, dumpb as bjddumpb, load as bjdload, loadb as bjdloadb, EncoderException,
                     DecoderException, EXTENSION_ENABLED)
 from bjdata.markers import (TYPE_NULL, TYPE_NOOP, TYPE_BOOL_TRUE, TYPE_BOOL_FALSE, TYPE_INT8, TYPE_UINT8, TYPE_INT16,
-                            TYPE_INT32, TYPE_INT64, TYPE_FLOAT32, TYPE_FLOAT64, TYPE_HIGH_PREC, TYPE_CHAR, TYPE_STRING,
-                            OBJECT_START, OBJECT_END, ARRAY_START, ARRAY_END, CONTAINER_TYPE, CONTAINER_COUNT)
+                            TYPE_INT32, TYPE_INT64, TYPE_UINT16, TYPE_UINT32, TYPE_UINT64, TYPE_FLOAT16, TYPE_FLOAT32, TYPE_FLOAT64,
+                            TYPE_HIGH_PREC, TYPE_CHAR, TYPE_STRING, OBJECT_START, OBJECT_END, ARRAY_START, ARRAY_END,
+                            CONTAINER_TYPE, CONTAINER_COUNT)
 from bjdata.compat import INTEGER_TYPES
 # Pure Python versions
 from bjdata.encoder import dump as bjdpuredump, dumpb as bjdpuredumpb
@@ -160,16 +161,16 @@ class TestEncodeDecodePlain(TestCase):  # pylint: disable=too-many-public-method
                 (TYPE_UINT8, 255, 2),
                 (TYPE_INT8, -128, 2),
                 (TYPE_INT16, -32768, 3),
-                (TYPE_INT16, 456, 3),
-                (TYPE_INT16, 32767, 3),
+                (TYPE_UINT16, 456, 3),
+                (TYPE_UINT16, 32767, 3),
                 (TYPE_INT32, -2147483648, 5),
-                (TYPE_INT32, 1610612735, 5),
-                (TYPE_INT32, 2147483647, 5),
+                (TYPE_UINT32, 1610612735, 5),
+                (TYPE_UINT32, 2147483647, 5),
                 (TYPE_INT64, -9223372036854775808, 9),
-                (TYPE_INT64, 6917529027641081855, 9),
-                (TYPE_INT64, 9223372036854775807, 9),
+                (TYPE_UINT64, 6917529027641081855, 9),
+                (TYPE_UINT64, 9223372036854775807, 9),
+                (TYPE_UINT64, 9223372036854775808, 9),
                 # HIGH_PREC (marker + length marker + length + value)
-                (TYPE_HIGH_PREC, 9223372036854775808, 22),
                 (TYPE_HIGH_PREC, -9223372036854775809, 23),
                 (TYPE_HIGH_PREC, 9999999999999999999999999999999999999, 40)):
             self.check_enc_dec(value, total_size, expected_type=type_)
@@ -191,8 +192,8 @@ class TestEncodeDecodePlain(TestCase):  # pylint: disable=too-many-public-method
             # minimum length because: marker + length marker + length + value
             self.check_enc_dec(Decimal(value), 4, length_greater_or_equal=True)
         # cannot compare equality, so test separately (since these evaluate to "NULL"
-        for value in ('nan', '-inf', 'inf'):
-            self.assertEqual(self.bjdloadb(self.bjddumpb(Decimal(value))), None)
+        #for value in ('nan', '-inf', 'inf'):
+        #    self.assertEqual(self.bjdloadb(self.bjddumpb(Decimal(value))), None)
 
     def test_float(self):
         # insufficient length
@@ -218,9 +219,9 @@ class TestEncodeDecodePlain(TestCase):  # pylint: disable=too-many-public-method
                                9 if type_ == TYPE_FLOAT32 else total_size,
                                approximate=True,
                                expected_type=(TYPE_FLOAT64 if type_ == TYPE_FLOAT32 else type_))
-        for value in ('nan', '-inf', 'inf'):
-            for no_float32 in (True, False):
-                self.assertEqual(self.bjdloadb(self.bjddumpb(float(value), no_float32=no_float32)), None)
+        #for value in ('nan', '-inf', 'inf'):
+        #    for no_float32 in (True, False):
+        #        self.assertEqual(self.bjdloadb(self.bjddumpb(float(value), no_float32=no_float32)), None)
         # value which results in high_prec usage
         for no_float32 in (True, False):
             self.check_enc_dec(2.22e-308, 4, expected_type=TYPE_HIGH_PREC, length_greater_or_equal=True,

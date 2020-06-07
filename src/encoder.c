@@ -1,11 +1,12 @@
 /*
+ * Copyright (c) 2020 Qianqian Fang <q.fang at neu.edu>. All rights reserved.
  * Copyright (c) 2019 Iotic Labs Ltd. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     https://github.com/Iotic-Labs/py-bjdata/blob/master/LICENSE
+ *     https://github.com/fangq/py-bjdata/blob/master/LICENSE
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -241,7 +242,6 @@ static int _encode_PyObject_as_PyDecimal(PyObject *obj, _bjdata_encoder_buffer_t
     // Decimal class has no public C API
     BAIL_ON_NULL(decimal =  PyObject_CallFunctionObjArgs((PyObject*)PyDec_Type, obj, NULL));
     BAIL_ON_NONZERO(_encode_PyDecimal(decimal, buffer));
-
     Py_DECREF(decimal);
     return 0;
 
@@ -341,6 +341,36 @@ static int _encode_PyFloat(PyObject *obj, _bjdata_encoder_buffer_t *buffer) {
 #endif
             WRITE_CHAR_OR_BAIL(TYPE_NULL);
             return 0;
+#ifdef USE__FPCLASS
+        case _FPCLASS_NZ:
+        case _FPCLASS_PZ:
+#else
+        case FP_ZERO:
+#endif
+            BAIL_ON_NONZERO(_pyfuncs_ubj_PyFloat_Pack4(num, (unsigned char*)&numtmp[1], 0));
+            numtmp[0] = TYPE_FLOAT32;
+            WRITE_OR_BAIL(numtmp, 5);
+            return 0;
+#ifdef USE__FPCLASS
+        case _FPCLASS_ND:
+        case _FPCLASS_PD:
+#else
+        case FP_SUBNORMAL:
+#endif
+            BAIL_ON_NONZERO(_encode_PyObject_as_PyDecimal(obj, buffer));
+            return 0;
+    }
+
+
+#else /*USE__BJDATA*/
+
+
+#ifdef USE__FPCLASS
+    switch (_fpclass(num)) {
+#else
+    switch (fpclassify(num)) {
+#endif
+
 #ifdef USE__FPCLASS
         case _FPCLASS_NZ:
         case _FPCLASS_PZ:
@@ -477,7 +507,14 @@ static int _encode_PyLong(PyObject *obj, _bjdata_encoder_buffer_t *buffer) {
     long long num = PyLong_AsLongLongAndOverflow(obj, &overflow);
 
     if (overflow) {
-        BAIL_ON_NONZERO(_encode_PyObject_as_PyDecimal(obj, buffer));
+        char numtmp[9]; // large enough to hold type + maximum integer (INT64)
+        unsigned long long unum = PyLong_AsUnsignedLongLong(obj);
+        if(PyErr_Occurred()){
+	    PyErr_Clear();
+            BAIL_ON_NONZERO(_encode_PyObject_as_PyDecimal(obj, buffer));
+	}else{
+	    WRITE_UINT64_OR_BAIL(unum);
+	}
         return 0;
     } else if (num == -1 && PyErr_Occurred()) {
         // unexpected as PyLong should fit if not overflowing

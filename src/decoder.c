@@ -1,11 +1,12 @@
 /*
+ * Copyright (c) 2020 Qianqian Fang <q.fang at neu.edu>. All rights reserved.
  * Copyright (c) 2019 Iotic Labs Ltd. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     https://github.com/Iotic-Labs/py-bjdata/blob/master/LICENSE
+ *     https://github.com/fangq/py-bjdata/blob/master/LICENSE
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -130,7 +131,9 @@ static const char* _decoder_buffer_read_buffered(_bjdata_decoder_buffer_t *buffe
 
 static PyObject* _decode_int8(_bjdata_decoder_buffer_t *buffer);
 static PyObject* _decode_int16_32(_bjdata_decoder_buffer_t *buffer, Py_ssize_t size);
+static PyObject* _decode_uint16_32(_bjdata_decoder_buffer_t *buffer, Py_ssize_t size);
 static PyObject* _decode_int64(_bjdata_decoder_buffer_t *buffer);
+static PyObject* _decode_uint64(_bjdata_decoder_buffer_t *buffer);
 static PyObject* _decode_float32(_bjdata_decoder_buffer_t *buffer);
 static PyObject* _decode_float64(_bjdata_decoder_buffer_t *buffer);
 static PyObject* _decode_high_prec(_bjdata_decoder_buffer_t *buffer);
@@ -424,6 +427,29 @@ bail:
 }
 
 // NOTE: size parameter can only be 2 or 4 (bytes)
+static PyObject* _decode_uint16_32(_bjdata_decoder_buffer_t *buffer, Py_ssize_t size) {
+    const unsigned char *raw;
+    unsigned long value = 0;
+    Py_ssize_t i;
+
+    READ_OR_BAIL_CAST(size, raw, (const unsigned char *), "uint16/32");
+
+    for (i = size; i > 0; i--) {
+        value = (value << 8) | *raw++;
+    }
+
+#if PY_MAJOR_VERSION < 3
+    return PyLong_FromUnsignedLong(value);
+#else
+    return PyLong_FromUnsignedLong(value);
+#endif
+
+bail:
+    return NULL;
+}
+
+
+// NOTE: size parameter can only be 2 or 4 (bytes)
 static PyObject* _decode_int16_32(_bjdata_decoder_buffer_t *buffer, Py_ssize_t size) {
     const unsigned char *raw;
     long value = 0;
@@ -447,6 +473,29 @@ static PyObject* _decode_int16_32(_bjdata_decoder_buffer_t *buffer, Py_ssize_t s
 bail:
     return NULL;
 }
+
+static PyObject* _decode_uint64(_bjdata_decoder_buffer_t *buffer) {
+    const unsigned char *raw;
+    unsigned long long value = 0;
+    const Py_ssize_t size = 8;
+    Py_ssize_t i;
+
+    READ_OR_BAIL_CAST(8, raw, (const unsigned char *), "uint64");
+
+    for (i = size; i > 0; i--) {
+        value = (value << 8) | *raw++;
+    }
+
+    if (value >= 0 && value <= ULONG_MAX) {
+        return PyLong_FromUnsignedLong(Py_SAFE_DOWNCAST(value, unsigned long long, unsigned long));
+    } else {
+        return PyLong_FromUnsignedLongLong(value);
+    }
+
+bail:
+    return NULL;
+}
+
 
 static PyObject* _decode_int64(_bjdata_decoder_buffer_t *buffer) {
     const unsigned char *raw;
@@ -486,21 +535,27 @@ static long long _decode_int_non_negative(_bjdata_decoder_buffer_t *buffer, char
     }
 
     switch (marker) {
-        case TYPE_INT8:
-            BAIL_ON_NULL(int_obj = _decode_int8(buffer));
-            break;
         case TYPE_UINT8:
             BAIL_ON_NULL(int_obj = _decode_uint8(buffer));
             break;
+        case TYPE_INT8:
+            BAIL_ON_NULL(int_obj = _decode_int8(buffer));
+            break;
         case TYPE_UINT16:
+            BAIL_ON_NULL(int_obj = _decode_uint16_32(buffer, 2));
+            break;
         case TYPE_INT16:
             BAIL_ON_NULL(int_obj = _decode_int16_32(buffer, 2));
             break;
         case TYPE_UINT32:
+            BAIL_ON_NULL(int_obj = _decode_uint16_32(buffer, 4));
+            break;
         case TYPE_INT32:
             BAIL_ON_NULL(int_obj = _decode_int16_32(buffer, 4));
             break;
         case TYPE_UINT64:
+            BAIL_ON_NULL(int_obj = _decode_uint64(buffer));
+            break;
         case TYPE_INT64:
             BAIL_ON_NULL(int_obj = _decode_int64(buffer));
             break;
@@ -644,7 +699,7 @@ static _container_params_t _get_container_params(_bjdata_decoder_buffer_t *buffe
     // container value count
     if (CONTAINER_COUNT == marker) {
         params.counting = 1;
-#ifdef USE_BJDATA
+#ifdef USE__BJDATA
 	READ_CHAR_OR_BAIL(marker, "container count marker or optimized ND-array dimension array marker");
 	// obtain the total number of elements of an optimized ND array header
 	if(ARRAY_START == marker){
@@ -658,7 +713,7 @@ static _container_params_t _get_container_params(_bjdata_decoder_buffer_t *buffe
     	        }
 	    }else{
     	        while (ARRAY_END != marker) {
-    		    DECODE_LENGTH_OR_BAIL(length,dims.type);
+    		    DECODE_LENGTH_OR_BAIL(length);
     		    params.count*=length;
     	        }
 	    }
@@ -952,7 +1007,7 @@ static PyObject* _decode_object(_bjdata_decoder_buffer_t *buffer) {
                 READ_CHAR_OR_BAIL(marker, "object key length");
                 continue;
             }
-            DECODE_OBJECT_KEY_OR_RAISE_ENCODER_EXCEPTION("sized/unsized", intern);
+	    DECODE_OBJECT_KEY_OR_RAISE_ENCODER_EXCEPTION("sized/unsized", intern);
             BAIL_ON_NULL(value = _bjdata_decode_value(buffer, fixed_type));
             BAIL_ON_NONZERO(PyDict_SetItem(obj, key, value));
             Py_CLEAR(key);
@@ -1033,7 +1088,7 @@ PyObject* _bjdata_decode_value(_bjdata_decoder_buffer_t *buffer, char *given_mar
         case TYPE_UINT32:
             RETURN_OR_RAISE_DECODER_EXCEPTION(_decode_int16_32(buffer, 4), "uint32");
         case TYPE_UINT64:
-            RETURN_OR_RAISE_DECODER_EXCEPTION(_decode_int64(buffer), "uint64");
+            RETURN_OR_RAISE_DECODER_EXCEPTION(_decode_uint64(buffer), "uint64");
 #endif
         case TYPE_FLOAT32:
             RETURN_OR_RAISE_DECODER_EXCEPTION(_decode_float32(buffer), "float32");
