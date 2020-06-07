@@ -6,7 +6,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     https://github.com/fangq/py-bjdata/blob/master/LICENSE
+ *     https://github.com/fangq/pybj/blob/master/LICENSE
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -486,7 +486,7 @@ static PyObject* _decode_uint64(_bjdata_decoder_buffer_t *buffer) {
         value = (value << 8) | *raw++;
     }
 
-    if (value >= 0 && value <= ULONG_MAX) {
+    if (value <= ULONG_MAX) {
         return PyLong_FromUnsignedLong(Py_SAFE_DOWNCAST(value, unsigned long long, unsigned long));
     } else {
         return PyLong_FromUnsignedLongLong(value);

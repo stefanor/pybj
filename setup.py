@@ -1,10 +1,11 @@
+# Copyright (c) 2020 Qianqian Fang <q.fang at neu.edu>. All rights reserved.
 # Copyright (c) 2019 Iotic Labs Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     https://github.com/Iotic-Labs/py-bjdata/blob/master/LICENSE
+#     https://github.com/fangq/pybj/blob/master/LICENSE
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -64,7 +65,7 @@ class BuildExtWarnOnFail(build_ext):
                           % ext.name)
 
 
-BUILD_EXTENSIONS = 'PYUBJSON_NO_EXTENSION' not in os.environ and python_implementation() != 'PyPy'
+BUILD_EXTENSIONS = 'PYBJDATA_NO_EXTENSION' not in os.environ and python_implementation() != 'PyPy'
 
 COMPILE_ARGS = ['-std=c99', '-DUSE__BJDATA']
 # For testing/debug only - some of these are GCC-specific
@@ -72,16 +73,16 @@ COMPILE_ARGS = ['-std=c99', '-DUSE__BJDATA']
 #                  '-pedantic']
 
 setup(
-    name='py-bjdata',
+    name='bjdata',
     version=version,
-    description='Universal Binary JSON encoder/decoder',
+    description='Binary JData and UBJSON encoder/decoder',
     long_description=load_description('README.md'),
     long_description_content_type='text/markdown',
-    author='Iotic Labs Ltd',
-    author_email='info@iotic-labs.com',
-    maintainer='Iotic Labs Ltd',
-    maintainer_email='vilnis.termanis@iotic-labs.com',
-    url='https://github.com/Iotic-Labs/py-bjdata',
+    author='Qianqian Fang',
+    author_email='fangqq@gmail.com',
+    maintainer='Qianqian Fang',
+    maintainer_email='fangqq@gmail.com',
+    url='https://github.com/fangq/pybj',
     license='Apache License 2.0',
     packages=['bjdata'],
     extras_require={
@@ -98,9 +99,9 @@ setup(
         # undef_macros=['NDEBUG']
     )] if BUILD_EXTENSIONS else []),
     cmdclass={"build_ext": BuildExtWarnOnFail},
-    keywords=['bjdata', 'ubj', 'jdata', 'bjd', 'jbat'],
+    keywords = ['JSON', 'JData', 'UBJSON', 'OpenJData', 'NeuroJData', 'JNIfTI', 'Encoder', 'Decoder'],
     classifiers=[
-        'Development Status :: 5 - Production/Stable',
+        'Development Status :: 3 - Alpha',
         'License :: OSI Approved :: Apache Software License',
         'Intended Audience :: Developers',
         'Programming Language :: C',
