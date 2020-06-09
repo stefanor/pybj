@@ -28,7 +28,7 @@ PYBJDATA_NO_EXTENSION=1 python3 setup.py install
 **Notes**
 
 - The extension module is not required but provide a significant speed boost.
-- The above can also be run with v2.7+
+- The above can also be run with v2.7+ (replacing `pip3` and `python3` above by `pip` and `python`, respectively)
 - At run time, one can check whether compiled version is in use via the 
 _bjdata.EXTENSION_ENABLED_ boolean
 
@@ -40,7 +40,6 @@ It's meant to behave very much like Python's built-in
 import bjdata as bj
 
 encoded = bj.dumpb({u'a': 1})
-
 decoded = bj.loadb(encoded)
 ```
 **Note**: Only unicode strings in Python 2 will be encoded as strings, plain *str* 
