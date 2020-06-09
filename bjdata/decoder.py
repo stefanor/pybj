@@ -415,20 +415,33 @@ def load(fp, no_bytes=False, object_hook=None, object_pairs_hook=None, intern_ob
         raise TypeError('fp.read not callable')
     fp_read = fp.read
 
-    marker = fp_read(1)
-    try:
-        try:
-            return __METHOD_MAP[marker](fp_read, marker)
-        except KeyError:
-            pass
-        if marker == ARRAY_START:
-            return __decode_array(fp_read, bool(no_bytes), object_hook, object_pairs_hook, intern_object_keys)
-        if marker == OBJECT_START:
-            return __decode_object(fp_read, bool(no_bytes), object_hook, object_pairs_hook, intern_object_keys)
-        raise DecoderException('Invalid marker')
-    except DecoderException as ex:
-        raise_from(DecoderException(ex.args[0], position=(fp.tell() if hasattr(fp, 'tell') else None)), ex)
+    newobj=[]
 
+    while True:
+        marker = fp_read(1)
+        if marker == '':
+            break
+        try:
+            try:
+                return __METHOD_MAP[marker](fp_read, marker)
+            except KeyError:
+                pass
+            if marker == ARRAY_START:
+                newobj.append(__decode_array(fp_read, bool(no_bytes), object_hook, object_pairs_hook, intern_object_keys))
+            if marker == OBJECT_START:
+                newobj.append(__decode_object(fp_read, bool(no_bytes), object_hook, object_pairs_hook, intern_object_keys))
+            raise DecoderException('Invalid marker')
+        except DecoderException as ex:
+            if len(newobj)>0:
+                pass
+            else:
+                raise_from(DecoderException(ex.args[0], position=(fp.tell() if hasattr(fp, 'tell') else None)), ex)
+    if(len(newobj)==1):
+        newobj=newobj[0];
+    elif(len(newobj)==0):
+        raise DecoderException('Empty data');
+
+    return newobj;
 
 def loadb(chars, no_bytes=False, object_hook=None, object_pairs_hook=None, intern_object_keys=False):
     """Decodes and returns UBJSON from the given bytes or bytesarray object. See
