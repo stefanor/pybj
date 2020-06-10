@@ -19,6 +19,7 @@
 from io import BytesIO
 from struct import Struct, pack, error as StructError
 from decimal import Decimal, DecimalException
+import functools as ft
 
 from .compat import raise_from, intern_unicode
 from .markers import (TYPE_NONE, TYPE_NULL, TYPE_NOOP, TYPE_BOOL_TRUE, TYPE_BOOL_FALSE, TYPE_INT8, TYPE_UINT8,
@@ -344,6 +345,9 @@ def __decode_array(fp_read, no_bytes, object_hook, object_pairs_hook, intern_obj
             count -= 1
         if count and type_ == TYPE_NONE:
             marker = fp_read(1)
+
+    if len(dims)>0:
+        container=list(ft.reduce(lambda x, y: map(list, zip(*y*(x,))), (iter(container), ) +tuple(dims[:0:-1])))
 
     return container
 
