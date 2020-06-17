@@ -140,7 +140,7 @@ static PyObject* _decode_high_prec(_bjdata_decoder_buffer_t *buffer);
 static long long _decode_int_non_negative(_bjdata_decoder_buffer_t *buffer, char *given_marker);
 static PyObject* _decode_char(_bjdata_decoder_buffer_t *buffer);
 static PyObject* _decode_string(_bjdata_decoder_buffer_t *buffer);
-static _container_params_t _get_container_params(_bjdata_decoder_buffer_t *buffer, int in_mapping);
+static _container_params_t _get_container_params(_bjdata_decoder_buffer_t *buffer, int in_mapping, unsigned int *ndim, long long **dims);
 static int _is_no_data_type(char type);
 static PyObject* _no_data_type(char type);
 static PyObject* _decode_array(_bjdata_decoder_buffer_t *buffer);
@@ -670,7 +670,7 @@ bail:
     return NULL;
 }
 
-static _container_params_t _get_container_params(_bjdata_decoder_buffer_t *buffer, int in_mapping) {
+static _container_params_t _get_container_params(_bjdata_decoder_buffer_t *buffer, int in_mapping, unsigned int *nd_ndim, long long **nd_dims) {
     _container_params_t params={0};
     char marker;
 
@@ -702,20 +702,34 @@ static _container_params_t _get_container_params(_bjdata_decoder_buffer_t *buffe
 #ifdef USE__BJDATA
 	READ_CHAR_OR_BAIL(marker, "container count marker or optimized ND-array dimension array marker");
 	// obtain the total number of elements of an optimized ND array header
-	if(ARRAY_START == marker){
+	if(ARRAY_START == marker && nd_ndim!=NULL){
 	    long long length=0, i;
-	    _container_params_t dims=_get_container_params(buffer,0);
+	    _container_params_t dims=_get_container_params(buffer,0,NULL,NULL);
 	    params.count=1;
 	    if(dims.counting){
+	        *nd_ndim=dims.count;
+		if(dims.count && *nd_dims==NULL)
+		    *nd_dims=(long long *)malloc(sizeof(long long)*(*nd_ndim));
                 for(i=0;i<dims.count;i++){
     	            DECODE_LENGTH_OR_BAIL_MARKER(length,dims.type);
     		    params.count*=length;
+		    (*nd_dims)[i]=length;
     	        }
 	    }else{
+	        *nd_ndim=32;
+		*nd_dims=(long long *)malloc(sizeof(long long)*(*nd_ndim));
+		int i=0;
     	        while (ARRAY_END != marker) {
     		    DECODE_LENGTH_OR_BAIL(length);
     		    params.count*=length;
+		    (*nd_dims)[i++]=length;
+		    if(i>=*nd_ndim){
+		        *nd_ndim+=32;
+		        *nd_dims=(long long *)realloc(*nd_dims, sizeof(long long)*(*nd_ndim));
+		    }
     	        }
+		*nd_ndim=i;
+		*nd_dims=(long long *)realloc(*nd_dims, sizeof(long long)*(i));
 	    }
 	}else
 #endif
@@ -763,7 +777,9 @@ static PyObject* _no_data_type(char type) {
 }
 
 static PyObject* _decode_array(_bjdata_decoder_buffer_t *buffer) {
-    _container_params_t params = _get_container_params(buffer, 0);
+    unsigned int ndims;
+    long long *dims=NULL;
+    _container_params_t params = _get_container_params(buffer, 0, &ndims, &dims);
     PyObject *list = NULL;
     PyObject *value = NULL;
     char marker;
@@ -793,7 +809,6 @@ static PyObject* _decode_array(_bjdata_decoder_buffer_t *buffer) {
         // take advantage of faster creation/setting of list since count known
         } else {
             Py_ssize_t list_pos = 0; // position in list for far fast setting via PyList_SET_ITEM
-
             BAIL_ON_NULL(list = PyList_New(params.count));
 
             while (params.count > 0) {
@@ -828,7 +843,8 @@ static PyObject* _decode_array(_bjdata_decoder_buffer_t *buffer) {
             }
         }
     }
-
+    if(dims)
+        free(dims);
     return list;
 
 bail:
@@ -870,7 +886,7 @@ bail:
 }
 
 static PyObject* _decode_object_with_pairs_hook(_bjdata_decoder_buffer_t *buffer) {
-    _container_params_t params = _get_container_params(buffer, 1);
+    _container_params_t params = _get_container_params(buffer, 1, NULL, NULL);
     PyObject *obj = NULL;
     PyObject *list = NULL;
     PyObject *key = NULL;
@@ -967,7 +983,7 @@ bail:
 }
 
 static PyObject* _decode_object(_bjdata_decoder_buffer_t *buffer) {
-    _container_params_t params = _get_container_params(buffer, 1);
+    _container_params_t params = _get_container_params(buffer, 1, NULL, NULL);
     PyObject *obj = NULL;
     PyObject *newobj = NULL; // result of object_hook (if applicable)
     PyObject *key = NULL;
