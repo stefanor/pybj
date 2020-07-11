@@ -17,11 +17,13 @@
 
 #include <Python.h>
 #include <bytesobject.h>
+#include <numpy/arrayobject.h>
 
 #include "common.h"
 #include "markers.h"
 #include "decoder.h"
 #include "python_funcs.h"
+
 
 /******************************************************************************/
 
@@ -142,6 +144,7 @@ static PyObject* _decode_char(_bjdata_decoder_buffer_t *buffer);
 static PyObject* _decode_string(_bjdata_decoder_buffer_t *buffer);
 static _container_params_t _get_container_params(_bjdata_decoder_buffer_t *buffer, int in_mapping, unsigned int *ndim, long long **dims);
 static int _is_no_data_type(char type);
+static int _get_type_info(char type, int *bytelen);
 static PyObject* _no_data_type(char type);
 static PyObject* _decode_array(_bjdata_decoder_buffer_t *buffer);
 static PyObject* _decode_object_with_pairs_hook(_bjdata_decoder_buffer_t *buffer);
@@ -702,6 +705,7 @@ static _container_params_t _get_container_params(_bjdata_decoder_buffer_t *buffe
 #ifdef USE__BJDATA
 	READ_CHAR_OR_BAIL(marker, "container count marker or optimized ND-array dimension array marker");
 	// obtain the total number of elements of an optimized ND array header
+
 	if(ARRAY_START == marker && nd_ndim!=NULL){
 	    long long length=0, i;
 	    _container_params_t dims=_get_container_params(buffer,0,NULL,NULL);
@@ -716,17 +720,20 @@ static _container_params_t _get_container_params(_bjdata_decoder_buffer_t *buffe
 		    (*nd_dims)[i]=length;
     	        }
 	    }else{
+		int i=0;
+                long long length=0;
 	        *nd_ndim=32;
 		*nd_dims=(long long *)malloc(sizeof(long long)*(*nd_ndim));
-		int i=0;
+		marker=dims.marker;
     	        while (ARRAY_END != marker) {
-    		    DECODE_LENGTH_OR_BAIL(length);
+		    DECODE_LENGTH_OR_BAIL_MARKER(length,marker);
     		    params.count*=length;
 		    (*nd_dims)[i++]=length;
 		    if(i>=*nd_ndim){
 		        *nd_ndim+=32;
 		        *nd_dims=(long long *)realloc(*nd_dims, sizeof(long long)*(*nd_ndim));
 		    }
+    		    READ_CHAR_OR_BAIL(marker, "Length marker");
     	        }
 		*nd_ndim=i;
 		*nd_dims=(long long *)realloc(*nd_dims, sizeof(long long)*(i));
@@ -761,6 +768,50 @@ static int _is_no_data_type(char type) {
     return ((TYPE_NULL == type) || (TYPE_BOOL_TRUE == type) || (TYPE_BOOL_FALSE == type));
 }
 
+
+// Note: Does NOT reserve a new reference
+static int _get_type_info(char type, int *bytelen) {
+    switch (type) {
+        case TYPE_FLOAT16:
+	    *bytelen=2;
+            return PyArray_HALF;
+        case TYPE_FLOAT32:
+	    *bytelen=4;
+            return PyArray_FLOAT;
+        case TYPE_FLOAT64:
+	    *bytelen=8;
+            return PyArray_DOUBLE;
+        case TYPE_INT8:
+	    *bytelen=1;
+            return PyArray_BYTE;
+        case TYPE_UINT8:
+	    *bytelen=1;
+            return PyArray_UBYTE;
+        case TYPE_INT16:
+	    *bytelen=2;
+            return PyArray_SHORT;
+        case TYPE_UINT16:
+	    *bytelen=2;
+            return PyArray_USHORT;
+        case TYPE_INT32:
+	    *bytelen=4;
+            return PyArray_LONG;
+        case TYPE_UINT32:
+	    *bytelen=4;
+            return PyArray_ULONG;
+        case TYPE_INT64:
+	    *bytelen=8;
+            return PyArray_LONGLONG;
+        case TYPE_UINT64:
+	    *bytelen=8;
+            return PyArray_ULONGLONG;
+        default:
+	    *bytelen=0;
+            PyErr_SetString(PyExc_RuntimeError, "Internal error - _get_type_info");
+            return PyArray_USERDEF;
+    }
+}
+
 // Note: Does NOT reserve a new reference
 static PyObject* _no_data_type(char type) {
     switch (type) {
@@ -777,7 +828,7 @@ static PyObject* _no_data_type(char type) {
 }
 
 static PyObject* _decode_array(_bjdata_decoder_buffer_t *buffer) {
-    unsigned int ndims;
+    unsigned int ndims=0;
     long long *dims=NULL;
     _container_params_t params = _get_container_params(buffer, 0, &ndims, &dims);
     PyObject *list = NULL;
@@ -791,10 +842,23 @@ static PyObject* _decode_array(_bjdata_decoder_buffer_t *buffer) {
 
     if (params.counting) {
         // special case - byte array
-        if ((TYPE_UINT8 == params.type) && !buffer->prefs.no_bytes) {
+        if ((TYPE_CHAR == params.type) && !buffer->prefs.no_bytes && ndims==0) {
             BAIL_ON_NULL(list = PyBytes_FromStringAndSize(NULL, params.count));
             READ_INTO_OR_BAIL(params.count, PyBytes_AS_STRING(list), "bytes array");
             return list;
+        // special case - no data types
+        } else if (ndims) {
+	    int i, bytelen=0;
+	    npy_intp *arraydim=calloc(sizeof(npy_intp),ndims);
+	    int pytype=_get_type_info(params.type,&bytelen);
+	    PyArrayObject *jdarray=NULL;
+	    for(i=0;i<ndims;i++){
+	        arraydim[i]=dims[i];
+            }
+            BAIL_ON_NULL(jdarray = (PyArrayObject *) PyArray_SimpleNew(ndims, arraydim, pytype));
+            READ_INTO_OR_BAIL(bytelen*params.count, (char *)PyArray_DATA(jdarray), "ND array");
+	    free(arraydim);
+            return PyArray_Return(jdarray);
         // special case - no data types
         } else if (_is_no_data_type(params.type)) {
             BAIL_ON_NULL(list = PyList_New(params.count));
@@ -1128,6 +1192,10 @@ bail:
     return NULL;
 }
 
+PyMODINIT_FUNC _bjdata_init_numpy(void) {
+    import_array();
+}
+
 /******************************************************************************/
 
 int _bjdata_decoder_init(void) {
@@ -1150,6 +1218,7 @@ int _bjdata_decoder_init(void) {
     }
     PyDec_Type = (PyTypeObject*) tmp_obj;
     Py_CLEAR(tmp_module);
+    _bjdata_init_numpy();
 
     return 0;
 

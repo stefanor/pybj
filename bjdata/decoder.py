@@ -19,13 +19,14 @@
 from io import BytesIO
 from struct import Struct, pack, error as StructError
 from decimal import Decimal, DecimalException
-import functools as ft
+from functools import reduce
 
 from .compat import raise_from, intern_unicode
 from .markers import (TYPE_NONE, TYPE_NULL, TYPE_NOOP, TYPE_BOOL_TRUE, TYPE_BOOL_FALSE, TYPE_INT8, TYPE_UINT8,
                       TYPE_INT16, TYPE_INT32, TYPE_INT64, TYPE_FLOAT32, TYPE_FLOAT64, TYPE_HIGH_PREC, TYPE_CHAR,
 		      TYPE_UINT16, TYPE_UINT32, TYPE_UINT64, TYPE_FLOAT16,
                       TYPE_STRING, OBJECT_START, OBJECT_END, ARRAY_START, ARRAY_END, CONTAINER_TYPE, CONTAINER_COUNT)
+from numpy import array as ndarray, dtype as npdtype
 
 __TYPES = frozenset((TYPE_NULL, TYPE_BOOL_TRUE, TYPE_BOOL_FALSE, TYPE_INT8, TYPE_UINT8, TYPE_INT16, TYPE_INT32,
                      TYPE_INT64, TYPE_FLOAT32, TYPE_FLOAT64, TYPE_UINT16, TYPE_UINT32, TYPE_UINT64, TYPE_FLOAT16, 
@@ -41,10 +42,21 @@ __UNPACK_INT64 = Struct('>q').unpack
 __UNPACK_UINT16 = Struct('>H').unpack
 __UNPACK_UINT32 = Struct('>I').unpack
 __UNPACK_UINT64 = Struct('>Q').unpack
-__UNPACK_FLOAT16 = Struct('>q').unpack
+__UNPACK_FLOAT16 = Struct('>h').unpack
 __UNPACK_FLOAT32 = Struct('>f').unpack
 __UNPACK_FLOAT64 = Struct('>d').unpack
 
+__DTYPE_MAP = { TYPE_INT8: 'b',
+                TYPE_UINT8: 'B',
+                TYPE_INT16: 'h',
+		TYPE_UINT16: 'H',
+                TYPE_INT32: 'i',
+		TYPE_UINT32: 'I',
+                TYPE_INT64: 'q',
+		TYPE_UINT64: 'Q',
+		TYPE_FLOAT32: 'h',
+                TYPE_FLOAT32: 'f',
+                TYPE_FLOAT64: 'd'}
 
 class DecoderException(ValueError):
     """Raised when decoding of a UBJSON stream fails."""
@@ -209,7 +221,7 @@ __METHOD_MAP = {TYPE_NULL: (lambda _, __: None),
 def prodlist(mylist):
     result = 1
     for x in mylist: 
-         result = result * x  
+         result = result * x
     return result
 
 def __get_container_params(fp_read, in_mapping, no_bytes, object_hook, object_pairs_hook, intern_object_keys):
@@ -311,7 +323,7 @@ def __decode_array(fp_read, no_bytes, object_hook, object_pairs_hook, intern_obj
         return [__METHOD_MAP[type_](fp_read, type_)] * count
 
     # special case - bytes array
-    if type_ == TYPE_UINT8 and not no_bytes:
+    if type_ == TYPE_UINT8 and not no_bytes and len(dims)==0:
         container = fp_read(count)
         if len(container) < count:
             raise DecoderException('Container bytes array too short')
@@ -347,7 +359,8 @@ def __decode_array(fp_read, no_bytes, object_hook, object_pairs_hook, intern_obj
             marker = fp_read(1)
 
     if len(dims)>0:
-        container=list(ft.reduce(lambda x, y: map(list, zip(*y*(x,))), (iter(container), ) +tuple(dims[:0:-1])))
+        container=list(reduce(lambda x, y: map(list, zip(*y*(x,))), (iter(container), ) +tuple(dims[:0:-1])))
+        container=ndarray(container, dtype=npdtype(__DTYPE_MAP[type_]))
 
     return container
 

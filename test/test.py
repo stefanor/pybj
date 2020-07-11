@@ -32,6 +32,7 @@ from bjdata.compat import INTEGER_TYPES
 # Pure Python versions
 from bjdata.encoder import dump as bjdpuredump, dumpb as bjdpuredumpb
 from bjdata.decoder import load as bjdpureload, loadb as bjdpureloadb
+from numpy import array as ndarray, int8 as npint8
 
 PY2 = version_info[0] < 3
 
@@ -88,6 +89,7 @@ class TestEncodeDecodePlain(TestCase):  # pylint: disable=too-many-public-method
                       **kwargs):
         """Black-box test to check whether the provided object is the same once encoded and subsequently decoded."""
         encoded = self.bjddumpb(obj, **kwargs)
+	print self.bjdloadb(encoded, object_hook=object_hook, object_pairs_hook=object_pairs_hook)
         if expected_type is not None:
             self.type_check(encoded[0], expected_type)
         if length is not None:
@@ -263,6 +265,16 @@ class TestEncodeDecodePlain(TestCase):  # pylint: disable=too-many-public-method
             self.assertEqual(self.bjdloadb(self.bjddumpb(cast(b'\x04' * 4)), no_bytes=True), [4] * 4)
             self.check_enc_dec(cast(b'largebinary' * 100))
 
+    def test_nd_array(self):
+        raw_start = (ARRAY_START + CONTAINER_TYPE + TYPE_INT8 + CONTAINER_COUNT + ARRAY_START + \
+                    CONTAINER_TYPE + TYPE_INT8 + CONTAINER_COUNT + TYPE_UINT8 + b'\x02' + \
+                    b'\x03' + b'\x02' + b'\x01'+ b'\x02'+ b'\x03'+ b'\x04'+ b'\x05'+ b'\x06')
+        self.assertEqual((self.bjdloadb(raw_start)==ndarray([[1,2],[3,4],[5,6]], npint8)).all(), True)
+
+        raw_start = (ARRAY_START + CONTAINER_TYPE + TYPE_INT8 + CONTAINER_COUNT + ARRAY_START + \
+                    TYPE_UINT8 + b'\x03' + TYPE_UINT16 + b'\x00' + b'\x02' + ARRAY_END + \
+                    b'\x01'+ b'\x02'+ b'\x03'+ b'\x04'+ b'\x05'+ b'\x06')
+        self.assertEqual((self.bjdloadb(raw_start)==ndarray([[1,2],[3,4],[5,6]], npint8)).all(), True)
     def test_array_fixed(self):
         raw_start = ARRAY_START + CONTAINER_TYPE + TYPE_INT8 + CONTAINER_COUNT + TYPE_UINT8
         self.assertEqual(self.bjdloadb(raw_start + b'\x00'), [])
