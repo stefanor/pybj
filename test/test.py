@@ -89,7 +89,6 @@ class TestEncodeDecodePlain(TestCase):  # pylint: disable=too-many-public-method
                       **kwargs):
         """Black-box test to check whether the provided object is the same once encoded and subsequently decoded."""
         encoded = self.bjddumpb(obj, **kwargs)
-	print self.bjdloadb(encoded, object_hook=object_hook, object_pairs_hook=object_pairs_hook)
         if expected_type is not None:
             self.type_check(encoded[0], expected_type)
         if length is not None:

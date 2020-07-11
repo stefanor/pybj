@@ -842,7 +842,7 @@ static PyObject* _decode_array(_bjdata_decoder_buffer_t *buffer) {
 
     if (params.counting) {
         // special case - byte array
-        if ((TYPE_CHAR == params.type) && !buffer->prefs.no_bytes && ndims==0) {
+        if ((TYPE_UINT8 == params.type) && !buffer->prefs.no_bytes && ndims==0) {
             BAIL_ON_NULL(list = PyBytes_FromStringAndSize(NULL, params.count));
             READ_INTO_OR_BAIL(params.count, PyBytes_AS_STRING(list), "bytes array");
             return list;
