@@ -436,7 +436,7 @@ def load(fp, no_bytes=False, object_hook=None, object_pairs_hook=None, intern_ob
 
     while True:
         marker = fp_read(1)
-        if marker == '':
+        if len(marker) == 0:
             break
         try:
             try:
