@@ -38,6 +38,6 @@ except ImportError:  # pragma: no cover
 from .encoder import EncoderException
 from .decoder import DecoderException
 
-__version__ = '0.2.9'
+__version__ = '0.2.5'
 
 __all__ = ('EXTENSION_ENABLED', 'dump', 'dumpb', 'EncoderException', 'load', 'loadb', 'DecoderException')
