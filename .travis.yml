@@ -1,0 +1,19 @@
+os:
+  - linux
+  - osx
+
+language:
+  -python
+
+jobs:
+  include:
+    - python: 2.7
+    - python: 3.8
+    - python: 3.6
+
+install:
+  - pip install coverage numpy
+
+script:
+  - ./coverage_test.sh
+  - python setup.py sdist
