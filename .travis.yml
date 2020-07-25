@@ -11,7 +11,7 @@ jobs:
     - python: 3.6
 
 before_install:
-  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then sudo apt-get install python-numpy python3-numpy cython3; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then sudo apt-get install python-numpy python3-numpy cython3 lcov; fi
   - pip install coverage
 
 addons:
@@ -20,6 +20,7 @@ addons:
     - python3-numpy
     - python-numpy
     - cython3
+    - lcov
     update: true
 
 script:
