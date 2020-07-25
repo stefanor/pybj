@@ -1,6 +1,5 @@
 os:
   - linux
-  - osx
 
 language:
   -python
@@ -11,8 +10,17 @@ jobs:
     - python: 3.8
     - python: 3.6
 
-install:
-  - pip install coverage numpy
+before_install:
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then sudo apt-get install python-numpy python3-numpy cython3; fi
+  - pip install coverage
+
+addons:
+  apt:
+    packages:
+    - python3-numpy
+    - python-numpy
+    - cython3
+    update: true
 
 script:
   - ./coverage_test.sh
