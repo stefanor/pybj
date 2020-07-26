@@ -1,11 +1,12 @@
 # Binary JData for Python - a lightweight binary JSON format
 
 - Copyright: (C) Qianqian Fang (2020) <q.fang at neu.edu>
-- Copyright: (C) Iotic Labs Ltd. (2019) <vilnis.termanis at iotic-labs.com>
+- Copyright: (C) Iotic Labs Ltd. (2016-2019) <vilnis.termanis at iotic-labs.com>
 - License: Apache License, Version 2.0
 - Version: 0.2
 - URL: https://github.com/fangq/pybj
 
+[![Build Status](https://travis-ci.com/fangq/pybj.svg?branch=master)](https://travis-ci.com/fangq/pybj)
 
 This is a Python v3.2+ (and 2.7+) [Binary JData](http://openjdata.org) based on 
 the [Draft-1](Binary_JData_Specification.md) specification.
@@ -23,6 +24,14 @@ python3 setup.py install
 
 ## To skip building of extensions when installing (or building)
 PYBJDATA_NO_EXTENSION=1 python3 setup.py install
+```
+
+This package can also be installed on Ubuntu (Debian package is currently under
+review) via
+```
+sudo add-apt-repository ppa:fangq/ppa
+sudo apt-get update
+sudo apt-get install python-bjdata python3-bjdata
 ```
 
 **Notes**
