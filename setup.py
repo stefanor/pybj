@@ -85,6 +85,9 @@ setup(
     url='https://github.com/fangq/pybj',
     license='Apache License 2.0',
     packages=['bjdata'],
+    install_requires=[
+       'numpy>=1.8.0'
+    ],
     extras_require={
         'dev': [
             'Pympler>=0.7 ,<0.8',
@@ -99,9 +102,9 @@ setup(
         # undef_macros=['NDEBUG']
     )] if BUILD_EXTENSIONS else []),
     cmdclass={"build_ext": BuildExtWarnOnFail},
-    keywords = ['JSON', 'JData', 'UBJSON', 'OpenJData', 'NeuroJData', 'JNIfTI', 'Encoder', 'Decoder'],
+    keywords = ['JSON', 'JData', 'UBJSON', 'BJData', 'OpenJData', 'NeuroJSON', 'JNIfTI', 'Encoder', 'Decoder'],
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
         'License :: OSI Approved :: Apache Software License',
         'Intended Audience :: Developers',
         'Programming Language :: C',
