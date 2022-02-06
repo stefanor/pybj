@@ -34,8 +34,6 @@ from distutils.command.build_ext import build_ext
 from distutils.errors import CCompilerError
 from distutils.errors import DistutilsPlatformError, DistutilsExecError
 
-from bjdata import __version__ as version
-
 
 def load_description(filename):
     script_dir = os.path.abspath(os.path.dirname(__file__))
@@ -74,7 +72,7 @@ COMPILE_ARGS = ['-std=c99', '-DUSE__BJDATA']
 
 setup(
     name='bjdata',
-    version=version,
+    version='0.3.0',
     description='Binary JData and UBJSON encoder/decoder',
     long_description=load_description('README.md'),
     long_description_content_type='text/markdown',
