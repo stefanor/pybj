@@ -11,7 +11,7 @@
 [![Build Status](https://travis-ci.com/fangq/pybj.svg?branch=master)](https://travis-ci.com/fangq/pybj)
 
 This is a Python v3.2+ (and 2.7+) [Binary JData](http://neurojson.org) based on 
-the [Draft-1](Binary_JData_Specification.md) specification.
+the [Draft-2](Binary_JData_Specification.md) specification.
 
 ## Installing / packaging
 ```shell

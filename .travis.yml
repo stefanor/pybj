@@ -20,6 +20,8 @@ addons:
     - python3-numpy
     - python-numpy
     - cython3
+    - python-setuptools
+    - python3-setuptools
     - lcov
     update: true
 
