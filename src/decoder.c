@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2020 Qianqian Fang <q.fang at neu.edu>. All rights reserved.
- * Copyright (c) 2019 Iotic Labs Ltd. All rights reserved.
+ * Copyright (c) 2020-2022 Qianqian Fang <q.fang at neu.edu>. All rights reserved.
+ * Copyright (c) 2016-2019 Iotic Labs Ltd. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,6 @@
 #include "markers.h"
 #include "decoder.h"
 #include "python_funcs.h"
-
 
 /******************************************************************************/
 
@@ -436,11 +435,16 @@ static PyObject* _decode_uint16_32(_bjdata_decoder_buffer_t *buffer, Py_ssize_t 
     Py_ssize_t i;
 
     READ_OR_BAIL_CAST(size, raw, (const unsigned char *), "uint16/32");
-
-    for (i = size; i > 0; i--) {
-        value = (value << 8) | *raw++;
+    if(buffer->prefs.islittle){
+        unsigned char * buf=(unsigned char *)&value;
+        for (i = 0; i < size; i++) {
+            buf[i]=*raw++;
+        }
+    }else{
+        for (i = size; i > 0; i--) {
+            value = (value << 8) | *raw++;
+        }
     }
-
 #if PY_MAJOR_VERSION < 3
     return PyLong_FromUnsignedLong(value);
 #else
@@ -460,8 +464,15 @@ static PyObject* _decode_int16_32(_bjdata_decoder_buffer_t *buffer, Py_ssize_t s
 
     READ_OR_BAIL_CAST(size, raw, (const unsigned char *), "int16/32");
 
-    for (i = size; i > 0; i--) {
-        value = (value << 8) | *raw++;
+    if(buffer->prefs.islittle){
+        unsigned char * buf=(unsigned char *)&value;
+        for (i = 0; i < size; i++) {
+            buf[i]=*raw++;
+        }
+    }else{
+        for (i = size; i > 0; i--) {
+            value = (value << 8) | *raw++;
+        }
     }
     // extend signed bit
     if (SIZEOF_LONG > size) {
@@ -485,8 +496,15 @@ static PyObject* _decode_uint64(_bjdata_decoder_buffer_t *buffer) {
 
     READ_OR_BAIL_CAST(8, raw, (const unsigned char *), "uint64");
 
-    for (i = size; i > 0; i--) {
-        value = (value << 8) | *raw++;
+    if(buffer->prefs.islittle){
+        unsigned char * buf=(unsigned char *)&value;
+        for (i = 0; i < size; i++) {
+            buf[i]=*raw++;
+        }
+    }else{
+        for (i = size; i > 0; i--) {
+            value = (value << 8) | *raw++;
+        }
     }
 
     if (value <= ULONG_MAX) {
@@ -502,19 +520,27 @@ bail:
 
 static PyObject* _decode_int64(_bjdata_decoder_buffer_t *buffer) {
     const unsigned char *raw;
-    long long value = 0;
+    long long value = 0L;
     const Py_ssize_t size = 8;
     Py_ssize_t i;
 
     READ_OR_BAIL_CAST(8, raw, (const unsigned char *), "int64");
 
-    for (i = size; i > 0; i--) {
-        value = (value << 8) | *raw++;
+    if(buffer->prefs.islittle){
+        unsigned char * buf=(unsigned char *)&value;
+        for (i = 0; i < size; i++) {
+            buf[i]=*raw++;
+        }
+    }else{
+        for (i = size; i > 0; i--) {
+            value = (value << 8) | *raw++;
+        }
     }
     // extend signed bit
     if (SIZEOF_LONG_LONG > 8) {
         value |= -(value & ((long long)1 << ((8 * size) - 1)));
     }
+
     if (value >= LONG_MIN && value <= LONG_MAX) {
         return PyLong_FromLong(Py_SAFE_DOWNCAST(value, long long, long));
     } else {
@@ -595,7 +621,7 @@ static PyObject* _decode_float32(_bjdata_decoder_buffer_t *buffer) {
     double value;
 
     READ_OR_BAIL(4, raw, "float32");
-    value = _pyfuncs_ubj_PyFloat_Unpack4((const unsigned char *)raw, 0);
+    value = _pyfuncs_ubj_PyFloat_Unpack4((const unsigned char *)raw, buffer->prefs.islittle);
     if ((-1.0 == value) && PyErr_Occurred()) {
         goto bail;
     }
@@ -610,7 +636,7 @@ static PyObject* _decode_float64(_bjdata_decoder_buffer_t *buffer) {
     double value;
 
     READ_OR_BAIL(8, raw, "float64");
-    value = _pyfuncs_ubj_PyFloat_Unpack8((const unsigned char *)raw, 0);
+    value = _pyfuncs_ubj_PyFloat_Unpack8((const unsigned char *)raw, buffer->prefs.islittle);
     if ((-1.0 == value) && PyErr_Occurred()) {
         goto bail;
     }
@@ -720,7 +746,7 @@ static _container_params_t _get_container_params(_bjdata_decoder_buffer_t *buffe
 		    (*nd_dims)[i]=length;
     	        }
 	    }else{
-		int i=0;
+		unsigned int i=0;
                 long long length=0;
 	        *nd_ndim=32;
 		*nd_dims=(long long *)malloc(sizeof(long long)*(*nd_ndim));
@@ -848,7 +874,8 @@ static PyObject* _decode_array(_bjdata_decoder_buffer_t *buffer) {
             return list;
         // special case - no data types
         } else if (ndims) {
-	    int i, bytelen=0;
+	    unsigned int i;
+            int bytelen=0;
 	    npy_intp *arraydim=calloc(sizeof(npy_intp),ndims);
 	    int pytype=_get_type_info(params.type,&bytelen);
 	    PyArrayObject *jdarray=NULL;
@@ -1164,9 +1191,9 @@ PyObject* _bjdata_decode_value(_bjdata_decoder_buffer_t *buffer, char *given_mar
         case TYPE_UINT8:
             RETURN_OR_RAISE_DECODER_EXCEPTION(_decode_uint8(buffer), "uint8");
         case TYPE_UINT16:
-            RETURN_OR_RAISE_DECODER_EXCEPTION(_decode_int16_32(buffer, 2), "uint16");
+            RETURN_OR_RAISE_DECODER_EXCEPTION(_decode_uint16_32(buffer, 2), "uint16");
         case TYPE_UINT32:
-            RETURN_OR_RAISE_DECODER_EXCEPTION(_decode_int16_32(buffer, 4), "uint32");
+            RETURN_OR_RAISE_DECODER_EXCEPTION(_decode_uint16_32(buffer, 4), "uint32");
         case TYPE_UINT64:
             RETURN_OR_RAISE_DECODER_EXCEPTION(_decode_uint64(buffer), "uint64");
 #endif

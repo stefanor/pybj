@@ -1,5 +1,5 @@
-# Copyright (c) 2020 Qianqian Fang <q.fang at neu.edu>. All rights reserved.
-# Copyright (c) 2019 Iotic Labs Ltd. All rights reserved.
+# Copyright (c) 2020-2022 Qianqian Fang <q.fang at neu.edu>. All rights reserved.
+# Copyright (c) 2016-2019 Iotic Labs Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@
 from __future__ import print_function
 from sys import argv, stderr, stdout, stdin, exit  # pylint: disable=redefined-builtin
 from json import load as jload, dump as jdump
+from collections import OrderedDict
 
 from .compat import STDIN_RAW, STDOUT_RAW
 from . import dump as bjdump, load as bjload, EncoderException, DecoderException
@@ -30,12 +31,12 @@ def __error(*args, **kwargs):
 
 def from_json(in_stream, out_stream):
     try:
-        obj = jload(in_stream)
+        obj = jload(in_stream, object_pairs_hook=OrderedDict)
     except ValueError as ex:
         __error('Failed to decode json: %s' % ex)
         return 8
     try:
-        bjdump(obj, out_stream, sort_keys=True)
+        bjdump(obj, out_stream, sort_keys=False)
     except EncoderException as ex:
         __error('Failed to encode to bjdata: %s' % ex)
         return 16
@@ -44,12 +45,12 @@ def from_json(in_stream, out_stream):
 
 def to_json(in_stream, out_stream):
     try:
-        obj = bjload(in_stream, intern_object_keys=True)
+        obj = bjload(in_stream, intern_object_keys=True,object_pairs_hook=OrderedDict)
     except DecoderException as ex:
         __error('Failed to decode bjdata: %s' % ex)
         return 8
     try:
-        jdump(obj, out_stream, sort_keys=True, separators=(',', ':'))
+        jdump(obj, out_stream, sort_keys=False, separators=(',', ':'))
     except TypeError as ex:
         __error('Failed to encode to json: %s' % ex)
         return 16

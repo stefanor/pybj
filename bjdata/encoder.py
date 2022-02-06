@@ -1,5 +1,5 @@
-# Copyright (c) 2020 Qianqian Fang <q.fang at neu.edu>. All rights reserved.
-# Copyright (c) 2019 Iotic Labs Ltd. All rights reserved.
+# Copyright (c) 2020-2022 Qianqian Fang <q.fang at neu.edu>. All rights reserved.
+# Copyright (c) 2016-2019 Iotic Labs Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 # limitations under the License.
 
 
-"""BJData (Draft 1) and UBJSON (Draft 12) encoder"""
+"""BJData (Draft 2) and UBJSON encoder"""
 
 from struct import pack, Struct
 from decimal import Decimal
@@ -28,17 +28,18 @@ from .markers import (TYPE_NULL, TYPE_BOOL_TRUE, TYPE_BOOL_FALSE, TYPE_INT8, TYP
                       OBJECT_END, ARRAY_START, ARRAY_END, CONTAINER_TYPE, CONTAINER_COUNT)
 
 # Lookup tables for encoding small intergers, pre-initialised larger integer & float packers
-__SMALL_INTS_ENCODED = {i: TYPE_INT8 + pack('>b', i) for i in range(-128, 128)}
-__SMALL_UINTS_ENCODED = {i: TYPE_UINT8 + pack('>B', i) for i in range(256)}
-__PACK_INT16 = Struct('>h').pack
-__PACK_INT32 = Struct('>i').pack
-__PACK_INT64 = Struct('>q').pack
-__PACK_UINT16 = Struct('>H').pack
-__PACK_UINT32 = Struct('>I').pack
-__PACK_UINT64 = Struct('>Q').pack
-__PACK_FLOAT16 = Struct('>h').pack
-__PACK_FLOAT32 = Struct('>f').pack
-__PACK_FLOAT64 = Struct('>d').pack
+__SMALL_INTS_ENCODED = [{i: TYPE_INT8 + pack('>b', i) for i in range(-128, 128)}, {i: TYPE_INT8 + pack('<b', i) for i in range(-128, 128)}]
+__SMALL_UINTS_ENCODED = [{i: TYPE_UINT8 + pack('>B', i) for i in range(256)}, {i: TYPE_UINT8 + pack('<B', i) for i in range(256)}]
+__PACK_INT16 = [Struct('>h').pack, Struct('<h').pack]
+__PACK_INT32 = [Struct('>i').pack, Struct('<i').pack]
+__PACK_INT64 = [Struct('>q').pack, Struct('<q').pack]
+__PACK_UINT16 = [Struct('>H').pack, Struct('<H').pack]
+__PACK_UINT32 = [Struct('>I').pack, Struct('<I').pack]
+__PACK_UINT64 = [Struct('>Q').pack, Struct('<Q').pack]
+__PACK_FLOAT16 = [Struct('>h').pack, Struct('<h').pack]
+__PACK_FLOAT32 = [Struct('>f').pack, Struct('<f').pack]
+__PACK_FLOAT64 = [Struct('>d').pack, Struct('<d').pack]
+
 
 # Prefix applicable to specialised byte array container
 __BYTES_ARRAY_PREFIX = ARRAY_START + CONTAINER_TYPE + TYPE_UINT8 + CONTAINER_COUNT
@@ -48,73 +49,75 @@ class EncoderException(TypeError):
     """Raised when encoding of an object fails."""
 
 
-def __encode_decimal(fp_write, item):
+def __encode_decimal(fp_write, item, le=1):
     if item.is_finite():
         fp_write(TYPE_HIGH_PREC)
         encoded_val = str(item).encode('utf-8')
-        __encode_int(fp_write, len(encoded_val))
+        __encode_int(fp_write, len(encoded_val), le)
         fp_write(encoded_val)
     else:
         fp_write(TYPE_NULL)
 
 
-def __encode_int(fp_write, item):
+def __encode_int(fp_write, item, le=1):
     if item >= 0:
         if item < 2 ** 8:
-            fp_write(__SMALL_UINTS_ENCODED[item])
+            fp_write(__SMALL_UINTS_ENCODED[le][item])
         elif item < 2 ** 16:
             fp_write(TYPE_UINT16)
-            fp_write(__PACK_UINT16(item))
+            fp_write(__PACK_UINT16[le](item))
         elif item < 2 ** 32:
             fp_write(TYPE_UINT32)
-            fp_write(__PACK_UINT32(item))
+            fp_write(__PACK_UINT32[le](item))
         elif item < 2 ** 64:
             fp_write(TYPE_UINT64)
-            fp_write(__PACK_UINT64(item))
+            fp_write(__PACK_UINT64[le](item))
         else:
-            __encode_decimal(fp_write, Decimal(item))
+            __encode_decimal(fp_write, Decimal(item), le)
     elif item >= -(2 ** 7):
-        fp_write(__SMALL_INTS_ENCODED[item])
+        fp_write(__SMALL_INTS_ENCODED[le][item])
     elif item >= -(2 ** 15):
         fp_write(TYPE_INT16)
-        fp_write(__PACK_INT16(item))
+        fp_write(__PACK_INT16[le](item))
     elif item >= -(2 ** 31):
         fp_write(TYPE_INT32)
-        fp_write(__PACK_INT32(item))
+        fp_write(__PACK_INT32[le](item))
     elif item >= -(2 ** 63):
         fp_write(TYPE_INT64)
-        fp_write(__PACK_INT64(item))
+        fp_write(__PACK_INT64[le](item))
     else:
-        __encode_decimal(fp_write, Decimal(item))
+        __encode_decimal(fp_write, Decimal(item), le)
 
 
-def __encode_float(fp_write, item):
+def __encode_float(fp_write, item, le=1):
     if 1.18e-38 <= abs(item) <= 3.4e38 or item == 0:
         fp_write(TYPE_FLOAT32)
-        fp_write(__PACK_FLOAT32(item))
+        fp_write(__PACK_FLOAT32[le](item))
     elif 2.23e-308 <= abs(item) < 1.8e308:
         fp_write(TYPE_FLOAT64)
-        fp_write(__PACK_FLOAT64(item))
+        fp_write(__PACK_FLOAT64[le](item))
     elif isinf(item) or isnan(item):
-        fp_write(TYPE_NULL)
+        fp_write(TYPE_FLOAT32)
+        fp_write(__PACK_FLOAT32[le](item))
     else:
-        __encode_decimal(fp_write, Decimal(item))
+        __encode_decimal(fp_write, Decimal(item), le)
 
 
-def __encode_float64(fp_write, item):
+def __encode_float64(fp_write, item, le=1):
     if 2.23e-308 <= abs(item) < 1.8e308:
         fp_write(TYPE_FLOAT64)
-        fp_write(__PACK_FLOAT64(item))
+        fp_write(__PACK_FLOAT64[le](item))
     elif item == 0:
         fp_write(TYPE_FLOAT32)
-        fp_write(__PACK_FLOAT32(item))
+        fp_write(__PACK_FLOAT32[le](item))
     elif isinf(item) or isnan(item):
-        fp_write(TYPE_NULL)
+        fp_write(TYPE_FLOAT64)
+        fp_write(__PACK_FLOAT64[le](item))
     else:
-        __encode_decimal(fp_write, Decimal(item))
+        __encode_decimal(fp_write, Decimal(item), le)
 
 
-def __encode_string(fp_write, item):
+def __encode_string(fp_write, item, le=1):
     encoded_val = item.encode('utf-8')
     length = len(encoded_val)
     if length == 1:
@@ -122,26 +125,27 @@ def __encode_string(fp_write, item):
     else:
         fp_write(TYPE_STRING)
         if length < 2 ** 8:
-            fp_write(__SMALL_UINTS_ENCODED[length])
+            fp_write(__SMALL_UINTS_ENCODED[le][length])
         else:
-            __encode_int(fp_write, length)
+            __encode_int(fp_write, length, le)
     fp_write(encoded_val)
 
 
-def __encode_bytes(fp_write, item):
+def __encode_bytes(fp_write, item, le=1):
     fp_write(__BYTES_ARRAY_PREFIX)
     length = len(item)
     if length < 2 ** 8:
-        fp_write(__SMALL_UINTS_ENCODED[length])
+        fp_write(__SMALL_UINTS_ENCODED[le][length])
     else:
-        __encode_int(fp_write, length)
+        __encode_int(fp_write, length, le)
     fp_write(item)
     # no ARRAY_END since length was specified
 
 
-def __encode_value(fp_write, item, seen_containers, container_count, sort_keys, no_float32, default):
+def __encode_value(fp_write, item, seen_containers, container_count, sort_keys, no_float32, islittle, default):
+    le=islittle;
     if isinstance(item, UNICODE_TYPE):
-        __encode_string(fp_write, item)
+        __encode_string(fp_write, item, le)
 
     elif item is None:
         fp_write(TYPE_NULL)
@@ -153,35 +157,35 @@ def __encode_value(fp_write, item, seen_containers, container_count, sort_keys, 
         fp_write(TYPE_BOOL_FALSE)
 
     elif isinstance(item, INTEGER_TYPES):
-        __encode_int(fp_write, item)
+        __encode_int(fp_write, item, le)
 
     elif isinstance(item, float):
         if no_float32:
-            __encode_float64(fp_write, item)
+            __encode_float64(fp_write, item, le)
         else:
-            __encode_float(fp_write, item)
+            __encode_float(fp_write, item, le)
 
     elif isinstance(item, Decimal):
-        __encode_decimal(fp_write, item)
+        __encode_decimal(fp_write, item, le)
 
     elif isinstance(item, BYTES_TYPES):
         __encode_bytes(fp_write, item)
 
     # order important since mappings could also be sequences
     elif isinstance(item, Mapping):
-        __encode_object(fp_write, item, seen_containers, container_count, sort_keys, no_float32, default)
+        __encode_object(fp_write, item, seen_containers, container_count, sort_keys, no_float32, islittle, default)
 
     elif isinstance(item, Sequence):
-        __encode_array(fp_write, item, seen_containers, container_count, sort_keys, no_float32, default)
+        __encode_array(fp_write, item, seen_containers, container_count, sort_keys, no_float32, islittle, default)
 
     elif default is not None:
-        __encode_value(fp_write, default(item), seen_containers, container_count, sort_keys, no_float32, default)
+        __encode_value(fp_write, default(item), seen_containers, container_count, sort_keys, no_float32, islittle, default)
 
     else:
         raise EncoderException('Cannot encode item of type %s' % type(item))
 
 
-def __encode_array(fp_write, item, seen_containers, container_count, sort_keys, no_float32, default):
+def __encode_array(fp_write, item, seen_containers, container_count, sort_keys, no_float32, islittle,  default):
     # circular reference check
     container_id = id(item)
     if container_id in seen_containers:
@@ -191,10 +195,10 @@ def __encode_array(fp_write, item, seen_containers, container_count, sort_keys, 
     fp_write(ARRAY_START)
     if container_count:
         fp_write(CONTAINER_COUNT)
-        __encode_int(fp_write, len(item))
+        __encode_int(fp_write, len(item), islittle)
 
     for value in item:
-        __encode_value(fp_write, value, seen_containers, container_count, sort_keys, no_float32, default)
+        __encode_value(fp_write, value, seen_containers, container_count, sort_keys, no_float32,  islittle, default)
 
     if not container_count:
         fp_write(ARRAY_END)
@@ -202,7 +206,8 @@ def __encode_array(fp_write, item, seen_containers, container_count, sort_keys, 
     del seen_containers[container_id]
 
 
-def __encode_object(fp_write, item, seen_containers, container_count, sort_keys, no_float32, default):
+def __encode_object(fp_write, item, seen_containers, container_count, sort_keys, no_float32,  islittle, default):
+    le=islittle;
     # circular reference check
     container_id = id(item)
     if container_id in seen_containers:
@@ -212,7 +217,7 @@ def __encode_object(fp_write, item, seen_containers, container_count, sort_keys,
     fp_write(OBJECT_START)
     if container_count:
         fp_write(CONTAINER_COUNT)
-        __encode_int(fp_write, len(item))
+        __encode_int(fp_write, len(item), le)
 
     for key, value in sorted(item.items()) if sort_keys else item.items():
         # allow both str & unicode for Python 2
@@ -221,12 +226,12 @@ def __encode_object(fp_write, item, seen_containers, container_count, sort_keys,
         encoded_key = key.encode('utf-8')
         length = len(encoded_key)
         if length < 2 ** 8:
-            fp_write(__SMALL_UINTS_ENCODED[length])
+            fp_write(__SMALL_UINTS_ENCODED[le][length])
         else:
-            __encode_int(fp_write, length)
+            __encode_int(fp_write, length, le)
         fp_write(encoded_key)
 
-        __encode_value(fp_write, value, seen_containers, container_count, sort_keys, no_float32, default)
+        __encode_value(fp_write, value, seen_containers, container_count, sort_keys, no_float32,  islittle, default)
 
     if not container_count:
         fp_write(OBJECT_END)
@@ -234,7 +239,7 @@ def __encode_object(fp_write, item, seen_containers, container_count, sort_keys,
     del seen_containers[container_id]
 
 
-def dump(obj, fp, container_count=False, sort_keys=False, no_float32=True, default=None):
+def dump(obj, fp, container_count=False, sort_keys=False, no_float32=True, islittle=True, default=None):
     """Writes the given object as UBJSON to the provided file-like object
 
     Args:
@@ -250,6 +255,9 @@ def dump(obj, fp, container_count=False, sort_keys=False, no_float32=True, defau
         no_float32 (bool): Never use float32 to store float numbers (other than
                            for zero). Disabling this might save space at the
                            loss of precision.
+        islittle (1 or 0): default is 1 for little-endian for all numerics (for 
+                            BJData Draft 2), change to 0 to use big-endian
+                            (for UBJSON for BJData Draft 1)
         default (callable): Called for objects which cannot be serialised.
                             Should return a UBJSON-encodable version of the
                             object or raise an EncoderException.
@@ -306,12 +314,12 @@ def dump(obj, fp, container_count=False, sort_keys=False, no_float32=True, defau
         raise TypeError('fp.write not callable')
     fp_write = fp.write
 
-    __encode_value(fp_write, obj, {}, container_count, sort_keys, no_float32, default)
+    __encode_value(fp_write, obj, {}, container_count, sort_keys, no_float32, islittle, default)
 
 
-def dumpb(obj, container_count=False, sort_keys=False, no_float32=True, default=None):
+def dumpb(obj, container_count=False, sort_keys=False, no_float32=True, islittle=True, default=None):
     """Returns the given object as UBJSON in a bytes instance. See dump() for
        available arguments."""
     with BytesIO() as fp:
-        dump(obj, fp, container_count=container_count, sort_keys=sort_keys, no_float32=no_float32, default=default)
+        dump(obj, fp, container_count=container_count, sort_keys=sort_keys, no_float32=no_float32, islittle=islittle, default=default)
         return fp.getvalue()

@@ -1,4 +1,5 @@
-# Copyright (c) 2019 Iotic Labs Ltd. All rights reserved.
+# Copyright (c) 2020-2022 Qianqian Fang <q.fang at neu.edu>. All rights reserved.
+# Copyright (c) 2016-2019 Iotic Labs Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -89,6 +90,7 @@ class TestEncodeDecodePlain(TestCase):  # pylint: disable=too-many-public-method
                       **kwargs):
         """Black-box test to check whether the provided object is the same once encoded and subsequently decoded."""
         encoded = self.bjddumpb(obj, **kwargs)
+
         if expected_type is not None:
             self.type_check(encoded[0], expected_type)
         if length is not None:
@@ -271,7 +273,7 @@ class TestEncodeDecodePlain(TestCase):  # pylint: disable=too-many-public-method
         self.assertEqual((self.bjdloadb(raw_start)==ndarray([[1,2],[3,4],[5,6]], npint8)).all(), True)
 
         raw_start = (ARRAY_START + CONTAINER_TYPE + TYPE_INT8 + CONTAINER_COUNT + ARRAY_START + \
-                    TYPE_UINT8 + b'\x03' + TYPE_UINT16 + b'\x00' + b'\x02' + ARRAY_END + \
+                    TYPE_UINT8 + b'\x03' + TYPE_UINT16 + b'\x02' + b'\x00' + ARRAY_END + \
                     b'\x01'+ b'\x02'+ b'\x03'+ b'\x04'+ b'\x05'+ b'\x06')
         self.assertEqual((self.bjdloadb(raw_start)==ndarray([[1,2],[3,4],[5,6]], npint8)).all(), True)
     def test_array_fixed(self):

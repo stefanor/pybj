@@ -1,20 +1,33 @@
 # Binary JData for Python - a lightweight binary JSON format
 
-- Copyright: (C) Qianqian Fang (2020) <q.fang at neu.edu>
+- Copyright: (C) Qianqian Fang (2020-2022) <q.fang at neu.edu>
 - Copyright: (C) Iotic Labs Ltd. (2016-2019) <vilnis.termanis at iotic-labs.com>
 - License: Apache License, Version 2.0
-- Version: 0.2
-- URL: https://github.com/fangq/pybj
+- Version: 0.3
+- URL: https://pypi.org/project/bjdata/
+- Github: https://github.com/fangq/pybj
+- Acknowledgement: This project is supported by US National Institute of Health (NIH) grant U24-NS124027
 
 [![Build Status](https://travis-ci.com/fangq/pybj.svg?branch=master)](https://travis-ci.com/fangq/pybj)
 
-This is a Python v3.2+ (and 2.7+) [Binary JData](http://openjdata.org) based on 
+This is a Python v3.2+ (and 2.7+) [Binary JData](http://neurojson.org) based on 
 the [Draft-1](Binary_JData_Specification.md) specification.
 
 ## Installing / packaging
 ```shell
 ## To get from PyPI
 pip3 install bjdata
+```
+
+Other instalation options
+```shell
+## Installing / packaging
+
+## To get from PyPI without root/administrator privilege
+pip3 install bjdata --user
+
+## To get from PyPI via python
+python3 -mpip install bjdata
 
 ## To only build extension modules inline (e.g. in repository)
 python3 setup.py build_ext -i
@@ -26,8 +39,13 @@ python3 setup.py install
 PYBJDATA_NO_EXTENSION=1 python3 setup.py install
 ```
 
-This package can also be installed on Ubuntu (Debian package is currently under
-review) via
+This package can be directly installed on Debian Bullseye/Ubuntu 21.04 or newer via
+```
+sudo apt-get install python3-bjdata
+```
+
+Both `python-bjdata` (for Python 2.7+) and `python3-bjdata` (for Python 3.x) can 
+also be installed on Ubuntu via
 ```
 sudo add-apt-repository ppa:fangq/ppa
 sudo apt-get update
@@ -39,7 +57,7 @@ sudo apt-get install python-bjdata python3-bjdata
 - The extension module is not required but provide a significant speed boost.
 - The above can also be run with v2.7+ (replacing `pip3` and `python3` above by `pip` and `python`, respectively)
 - At run time, one can check whether compiled version is in use via the 
-_bjdata.EXTENSION_ENABLED_ boolean
+`bjdata.EXTENSION_ENABLED` boolean
 
 
 ## Usage
@@ -48,7 +66,8 @@ It's meant to behave very much like Python's built-in
 ```python
 import bjdata as bj
 
-encoded = bj.dumpb({u'a': 1})
+obj={'a':123,'b':12.3,'c':[1,2,3,[4,5],'test']}
+encoded = bj.dumpb(obj)
 decoded = bj.loadb(encoded)
 ```
 **Note**: Only unicode strings in Python 2 will be encoded as strings, plain *str* 
@@ -57,9 +76,11 @@ will be encoded as a byte array.
 
 ## Documentation
 ```python
-import bjdata
-help(bjdata.dump)
-help(bjdata.load)
+import bjdata as bj
+help(bj.dump)
+help(bj.load)
+help(bj.encoder.dump)
+help(bj.decoder.load)
 ```
 
 ## Command-line utility
@@ -67,6 +88,11 @@ This converts between JSON and BJData formats:
 ```shell
 python3 -mbjdata
 USAGE: bjdata (fromjson|tojson) (INFILE|-) [OUTFILE]
+
+EXAMPLES:
+
+python3 -mbjdata fromjson input.json output.bjd
+python3 -mbjdata tojson   input.bjd  output.json
 ```
 
 
@@ -107,10 +133,11 @@ This package was modified based on the py-ubjson package developed by
 Project URL: https://github.com/Iotic-Labs/py-ubjson
 
 The major changes were focused on supporting the Binary JData Specification 
-[Draft 1](Binary_JData_Specification.md) - an extended Universal Binary JSON 
-(UBJSON) Specification Draft-12 by adding the below new features:
+[Draft 2](https://github.com/NeuroJSON/bjdata/blob/master/Binary_JData_Specification.md.md) -
+an extended Universal Binary JSON (UBJSON) Specification Draft-12 by adding
+the below new features:
 
-* BJData adds 4 new numeric data types: `uint16 [u]`, `uint32 [m]`, `uint64 [M]` 
-  and `float16 [h]`
+* BJData adds 4 new numeric data types: `uint16 [u]`, `uint32 [m]`, `uint64 [M]` and `float16 [h]`
 * BJData supports an optimized ND array container
 * BJData does not convert NaN/Inf/-Inf to `null`
+* BJData uses little-Endian as the default integer/floating-point numbers while UBJSON uses big-Endian

@@ -1,5 +1,5 @@
-# Copyright (c) 2020 Qianqian Fang <q.fang at neu.edu>. All rights reserved.
-# Copyright (c) 2019 Iotic Labs Ltd. All rights reserved.
+# Copyright (c) 2020-2022 Qianqian Fang <q.fang at neu.edu>. All rights reserved.
+# Copyright (c) 2016-2019 Iotic Labs Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,12 +14,12 @@
 # limitations under the License.
 
 
-"""BJData (Draft 1) and UBJSON (Draft 12) implementation without No-Op support
+"""BJData (Draft 2) and UBJSON (Draft 12) implementation
 
 Example usage:
 
 # To encode
-encoded = bjdata.dumpb({'a': 1})
+encoded = bjdata.dumpb({'a':123,'b':12.3,'c':[1,2,3,[4,5],'test']})
 
 # To decode
 decoded = bjdata.loadb(encoded)
@@ -38,6 +38,6 @@ except ImportError:  # pragma: no cover
 from .encoder import EncoderException
 from .decoder import DecoderException
 
-__version__ = '0.2.8'
+__version__ = '0.3.0'
 
 __all__ = ('EXTENSION_ENABLED', 'dump', 'dumpb', 'EncoderException', 'load', 'loadb', 'DecoderException')

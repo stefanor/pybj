@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2020 Qianqian Fang <q.fang at neu.edu>. All rights reserved.
- * Copyright (c) 2001-2016 Python Software Foundation; All Rights Reserved
+ * Copyright (c) 2020-2022 Qianqian Fang <q.fang at neu.edu>. All rights reserved.
+ * Copyright (c) 2016-2019 Iotic Labs Ltd. All rights reserved.
  *
  * Licensed under PSF license, see: https://docs.python.org/3/license.html
  *

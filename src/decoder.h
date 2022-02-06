@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2020 Qianqian Fang <q.fang at neu.edu>. All rights reserved.
- * Copyright (c) 2019 Iotic Labs Ltd. All rights reserved.
+ * Copyright (c) 2020-2022 Qianqian Fang <q.fang at neu.edu>. All rights reserved.
+ * Copyright (c) 2016-2019 Iotic Labs Ltd. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,8 @@
 extern "C" {
 #endif
 
+#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+
 #include <Python.h>
 
 /******************************************************************************/
@@ -31,6 +33,7 @@ typedef struct {
     // don't convert UINT8 arrays to bytes instances (and keep as an array of individual integers)
     int no_bytes;
     int intern_object_keys;
+    int islittle;
 } _bjdata_decoder_prefs_t;
 
 typedef struct _bjdata_decoder_buffer_t {

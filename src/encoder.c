@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2020 Qianqian Fang <q.fang at neu.edu>. All rights reserved.
- * Copyright (c) 2019 Iotic Labs Ltd. All rights reserved.
+ * Copyright (c) 2020-2022 Qianqian Fang <q.fang at neu.edu>. All rights reserved.
+ * Copyright (c) 2016-2019 Iotic Labs Ltd. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -347,7 +347,7 @@ static int _encode_PyFloat(PyObject *obj, _bjdata_encoder_buffer_t *buffer) {
 #else
         case FP_ZERO:
 #endif
-            BAIL_ON_NONZERO(_pyfuncs_ubj_PyFloat_Pack4(num, (unsigned char*)&numtmp[1], 0));
+            BAIL_ON_NONZERO(_pyfuncs_ubj_PyFloat_Pack4(num, (unsigned char*)&numtmp[1], buffer->prefs.islittle));
             numtmp[0] = TYPE_FLOAT32;
             WRITE_OR_BAIL(numtmp, 5);
             return 0;
@@ -377,7 +377,7 @@ static int _encode_PyFloat(PyObject *obj, _bjdata_encoder_buffer_t *buffer) {
 #else
         case FP_ZERO:
 #endif
-            BAIL_ON_NONZERO(_pyfuncs_ubj_PyFloat_Pack4(num, (unsigned char*)&numtmp[1], 0));
+            BAIL_ON_NONZERO(_pyfuncs_ubj_PyFloat_Pack4(num, (unsigned char*)&numtmp[1], buffer->prefs.islittle));
             numtmp[0] = TYPE_FLOAT32;
             WRITE_OR_BAIL(numtmp, 5);
             return 0;
@@ -395,11 +395,11 @@ static int _encode_PyFloat(PyObject *obj, _bjdata_encoder_buffer_t *buffer) {
 
     abs = fabs(num);
     if (!buffer->prefs.no_float32 && 1.18e-38 <= abs && 3.4e38 >= abs) {
-        BAIL_ON_NONZERO(_pyfuncs_ubj_PyFloat_Pack4(num, (unsigned char*)&numtmp[1], 0));
+        BAIL_ON_NONZERO(_pyfuncs_ubj_PyFloat_Pack4(num, (unsigned char*)&numtmp[1], buffer->prefs.islittle));
         numtmp[0] = TYPE_FLOAT32;
         WRITE_OR_BAIL(numtmp, 5);
     } else {
-        BAIL_ON_NONZERO(_pyfuncs_ubj_PyFloat_Pack8(num, (unsigned char*)&numtmp[1], 0));
+        BAIL_ON_NONZERO(_pyfuncs_ubj_PyFloat_Pack8(num, (unsigned char*)&numtmp[1], buffer->prefs.islittle));
         numtmp[0] = TYPE_FLOAT64;
         WRITE_OR_BAIL(numtmp, 9);
     }
@@ -418,11 +418,19 @@ bail:
 }
 #define WRITE_INT_INTO_NUMTMP(num, size) {\
     /* numtmp also stores type, so need one larger*/\
-    unsigned char i = size + 1;\
-    do {\
-        numtmp[--i] = (char)num;\
-        num >>= 8;\
-    } while (i > 1);\
+    if(!islittle){\
+        unsigned char i = size + 1;\
+        do {\
+            numtmp[--i] = (char)num;\
+            num >>= 8;\
+        } while (i > 1);\
+    }else{\
+        unsigned char i = 1;\
+        do {\
+            numtmp[i++] = (char)num;\
+            num >>= 8;\
+        } while (i < size + 1);\
+    }\
 }
 #define WRITE_INT16_OR_BAIL(num) {\
     WRITE_INT_INTO_NUMTMP(num, 2);\
@@ -463,6 +471,7 @@ bail:
 
 static int _encode_longlong(long long num, _bjdata_encoder_buffer_t *buffer) {
     char numtmp[9]; // large enough to hold type + maximum integer (INT64)
+    int islittle=(buffer->prefs.islittle);
 
 #ifdef USE__BJDATA
     if (num >= 0) {
@@ -509,6 +518,7 @@ static int _encode_PyLong(PyObject *obj, _bjdata_encoder_buffer_t *buffer) {
     if (overflow) {
         char numtmp[9]; // large enough to hold type + maximum integer (INT64)
         unsigned long long unum = PyLong_AsUnsignedLongLong(obj);
+        int islittle=(buffer->prefs.islittle);
         if(PyErr_Occurred()){
 	    PyErr_Clear();
             BAIL_ON_NONZERO(_encode_PyObject_as_PyDecimal(obj, buffer));

@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2020 Qianqian Fang <q.fang at neu.edu>. All rights reserved.
- * Copyright (c) 2019 Iotic Labs Ltd. All rights reserved.
+ * Copyright (c) 2020-2022 Qianqian Fang <q.fang at neu.edu>. All rights reserved.
+ * Copyright (c) 2016-2019 Iotic Labs Ltd. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,11 +23,11 @@
 
 /******************************************************************************/
 
-// container_count, sort_keys, no_float32
-static _bjdata_encoder_prefs_t _bjdata_encoder_prefs_defaults = { NULL, 0, 0, 1 };
+// container_count, sort_keys, no_float32, islittle
+static _bjdata_encoder_prefs_t _bjdata_encoder_prefs_defaults = { NULL, 0, 0, 1, 1 };
 
-// no_bytes, object_pairs_hook
-static _bjdata_decoder_prefs_t _bjdata_decoder_prefs_defaults = { NULL, NULL, 0, 0 };
+// no_bytes, object_pairs_hook, islittle
+static _bjdata_decoder_prefs_t _bjdata_decoder_prefs_defaults = { NULL, NULL, 0, 0, 1 };
 
 /******************************************************************************/
 
@@ -35,8 +35,8 @@ PyDoc_STRVAR(_bjdata_dump__doc__, "See pure Python version (encoder.dump) for do
 #define FUNC_DEF_DUMP {"dump", (PyCFunction)_bjdata_dump, METH_VARARGS | METH_KEYWORDS, _bjdata_dump__doc__}
 static PyObject*
 _bjdata_dump(PyObject *self, PyObject *args, PyObject *kwargs) {
-    static const char *format = "OO|iiiO:dump";
-    static char *keywords[] = {"obj", "fp", "container_count", "sort_keys", "no_float32", "default", NULL};
+    static const char *format = "OO|iiiiO:dump";
+    static char *keywords[] = {"obj", "fp", "container_count", "sort_keys", "no_float32", "islittle", "default", NULL};
 
     _bjdata_encoder_buffer_t *buffer = NULL;
     _bjdata_encoder_prefs_t prefs = _bjdata_encoder_prefs_defaults;
@@ -46,7 +46,7 @@ _bjdata_dump(PyObject *self, PyObject *args, PyObject *kwargs) {
     UNUSED(self);
 
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, format, keywords, &obj, &fp, &prefs.container_count,
-                                     &prefs.sort_keys, &prefs.no_float32, &prefs.default_func)) {
+                                     &prefs.sort_keys, &prefs.no_float32, &prefs.islittle, &prefs.default_func)) {
         goto bail;
     }
     BAIL_ON_NULL(fp_write = PyObject_GetAttrString(fp, "write"));
@@ -69,8 +69,8 @@ PyDoc_STRVAR(_bjdata_dumpb__doc__, "See pure Python version (encoder.dumpb) for 
 #define FUNC_DEF_DUMPB {"dumpb", (PyCFunction)_bjdata_dumpb, METH_VARARGS | METH_KEYWORDS, _bjdata_dumpb__doc__}
 static PyObject*
 _bjdata_dumpb(PyObject *self, PyObject *args, PyObject *kwargs) {
-    static const char *format = "O|iiiO:dumpb";
-    static char *keywords[] = {"obj", "container_count", "sort_keys", "no_float32", "default", NULL};
+    static const char *format = "O|iiiiO:dumpb";
+    static char *keywords[] = {"obj", "container_count", "sort_keys", "no_float32", "islittle", "default", NULL};
 
     _bjdata_encoder_buffer_t *buffer = NULL;
     _bjdata_encoder_prefs_t prefs = _bjdata_encoder_prefs_defaults;
@@ -78,7 +78,7 @@ _bjdata_dumpb(PyObject *self, PyObject *args, PyObject *kwargs) {
     UNUSED(self);
 
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, format, keywords, &obj, &prefs.container_count, &prefs.sort_keys,
-                                     &prefs.no_float32, &prefs.default_func)) {
+                                     &prefs.no_float32, &prefs.islittle, &prefs.default_func)) {
         goto bail;
     }
 
@@ -99,8 +99,8 @@ PyDoc_STRVAR(_bjdata_load__doc__, "See pure Python version (encoder.load) for do
 #define FUNC_DEF_LOAD {"load", (PyCFunction)_bjdata_load, METH_VARARGS | METH_KEYWORDS, _bjdata_load__doc__}
 static PyObject*
 _bjdata_load(PyObject *self, PyObject *args, PyObject *kwargs) {
-    static const char *format = "O|iOOi:load";
-    static char *keywords[] = {"fp", "no_bytes", "object_hook", "object_pairs_hook", "intern_object_keys", NULL};
+    static const char *format = "O|iOOii:load";
+    static char *keywords[] = {"fp", "no_bytes", "object_hook", "object_pairs_hook", "intern_object_keys", "islittle", NULL};
 
     _bjdata_decoder_buffer_t *buffer = NULL;
     _bjdata_decoder_prefs_t prefs = _bjdata_decoder_prefs_defaults;
@@ -112,7 +112,7 @@ _bjdata_load(PyObject *self, PyObject *args, PyObject *kwargs) {
     UNUSED(self);
 
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, format, keywords, &fp, &prefs.no_bytes,  &prefs.object_hook,
-                                     &prefs.object_pairs_hook, &prefs.intern_object_keys)) {
+                                     &prefs.object_pairs_hook, &prefs.intern_object_keys, &prefs.islittle)) {
         goto bail;
     }
 
@@ -154,8 +154,8 @@ PyDoc_STRVAR(_bjdata_loadb__doc__, "See pure Python version (encoder.loadb) for 
 #define FUNC_DEF_LOADB {"loadb", (PyCFunction)_bjdata_loadb, METH_VARARGS | METH_KEYWORDS, _bjdata_loadb__doc__}
 static PyObject*
 _bjdata_loadb(PyObject *self, PyObject *args, PyObject *kwargs) {
-    static const char *format = "O|iOOi:loadb";
-    static char *keywords[] = {"chars", "no_bytes", "object_hook", "object_pairs_hook", "intern_object_keys", NULL};
+    static const char *format = "O|iOOii:loadb";
+    static char *keywords[] = {"chars", "no_bytes", "object_hook", "object_pairs_hook", "intern_object_keys", "islittle", NULL};
 
     _bjdata_decoder_buffer_t *buffer = NULL;
     _bjdata_decoder_prefs_t prefs = _bjdata_decoder_prefs_defaults;
@@ -164,7 +164,7 @@ _bjdata_loadb(PyObject *self, PyObject *args, PyObject *kwargs) {
     UNUSED(self);
 
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, format, keywords, &chars, &prefs.no_bytes, &prefs.object_hook,
-                                     &prefs.object_pairs_hook, &prefs.intern_object_keys)) {
+                                     &prefs.object_pairs_hook, &prefs.intern_object_keys, &prefs.islittle)) {
         goto bail;
     }
     if (PyUnicode_Check(chars)) {

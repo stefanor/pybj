@@ -1,5 +1,5 @@
-# Copyright (c) 2020 Qianqian Fang <q.fang at neu.edu>. All rights reserved.
-# Copyright (c) 2019 Iotic Labs Ltd. All rights reserved.
+# Copyright (c) 2020-2022 Qianqian Fang <q.fang at neu.edu>. All rights reserved.
+# Copyright (c) 2016-2019 Iotic Labs Ltd. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 # limitations under the License.
 
 
-"""BJData (Draft 1) and UBJSON (Draft 12) and decoder"""
+"""BJData (Draft 2) and UBJSON encoder"""
 
 from io import BytesIO
 from struct import Struct, pack, error as StructError
@@ -34,17 +34,17 @@ __TYPES = frozenset((TYPE_NULL, TYPE_BOOL_TRUE, TYPE_BOOL_FALSE, TYPE_INT8, TYPE
 __TYPES_NO_DATA = frozenset((TYPE_NULL, TYPE_BOOL_FALSE, TYPE_BOOL_TRUE))
 __TYPES_INT = frozenset((TYPE_INT8, TYPE_UINT8, TYPE_INT16, TYPE_INT32, TYPE_INT64, TYPE_UINT16, TYPE_UINT32, TYPE_UINT64))
 
-__SMALL_INTS_DECODED = {pack('>b', i): i for i in range(-128, 128)}
-__SMALL_UINTS_DECODED = {pack('>B', i): i for i in range(256)}
-__UNPACK_INT16 = Struct('>h').unpack
-__UNPACK_INT32 = Struct('>i').unpack
-__UNPACK_INT64 = Struct('>q').unpack
-__UNPACK_UINT16 = Struct('>H').unpack
-__UNPACK_UINT32 = Struct('>I').unpack
-__UNPACK_UINT64 = Struct('>Q').unpack
-__UNPACK_FLOAT16 = Struct('>h').unpack
-__UNPACK_FLOAT32 = Struct('>f').unpack
-__UNPACK_FLOAT64 = Struct('>d').unpack
+__SMALL_INTS_DECODED = [{pack('>b', i): i for i in range(-128, 128)}, {pack('<b', i): i for i in range(-128, 128)}]
+__SMALL_UINTS_DECODED = [{pack('>B', i): i for i in range(256)}, {pack('<B', i): i for i in range(256)}]
+__UNPACK_INT16 = [Struct('>h').unpack, Struct('<h').unpack]
+__UNPACK_INT32 = [Struct('>i').unpack, Struct('<i').unpack]
+__UNPACK_INT64 = [Struct('>q').unpack, Struct('<q').unpack]
+__UNPACK_UINT16 = [Struct('>H').unpack, Struct('<H').unpack]
+__UNPACK_UINT32 = [Struct('>I').unpack, Struct('<I').unpack]
+__UNPACK_UINT64 = [Struct('>Q').unpack, Struct('<Q').unpack]
+__UNPACK_FLOAT16 = [Struct('>h').unpack, Struct('<h').unpack]
+__UNPACK_FLOAT32 = [Struct('>f').unpack, Struct('<f').unpack]
+__UNPACK_FLOAT64 = [Struct('>d').unpack, Struct('<d').unpack]
 
 __DTYPE_MAP = { TYPE_INT8: 'b',
                 TYPE_UINT8: 'B',
@@ -76,8 +76,8 @@ class DecoderException(ValueError):
 
 
 # pylint: disable=unused-argument
-def __decode_high_prec(fp_read, marker):
-    length = __decode_int_non_negative(fp_read, fp_read(1))
+def __decode_high_prec(fp_read, marker, le=1):
+    length = __decode_int_non_negative(fp_read, fp_read(1),le)
     raw = fp_read(length)
     if len(raw) < length:
         raise DecoderException('High prec. too short')
@@ -89,85 +89,85 @@ def __decode_high_prec(fp_read, marker):
         raise_from(DecoderException('Failed to decode decimal'), ex)
 
 
-def __decode_int_non_negative(fp_read, marker):
+def __decode_int_non_negative(fp_read, marker, le=1):
     if marker not in __TYPES_INT:
         raise DecoderException('Integer marker expected')
-    value = __METHOD_MAP[marker](fp_read, marker)
+    value = __METHOD_MAP[marker](fp_read, marker, le)
     if value < 0:
         raise DecoderException('Negative count/length unexpected')
     return value
 
 
-def __decode_int8(fp_read, marker):
+def __decode_int8(fp_read, marker, le=1):
     try:
-        return __SMALL_INTS_DECODED[fp_read(1)]
+        return __SMALL_INTS_DECODED[le][fp_read(1)]
     except KeyError as ex:
         raise_from(DecoderException('Failed to unpack int8'), ex)
 
 
-def __decode_uint8(fp_read, marker):
+def __decode_uint8(fp_read, marker, le=1):
     try:
-        return __SMALL_UINTS_DECODED[fp_read(1)]
+        return __SMALL_UINTS_DECODED[le][fp_read(1)]
     except KeyError as ex:
         raise_from(DecoderException('Failed to unpack uint8'), ex)
 
 
-def __decode_int16(fp_read, marker):
+def __decode_int16(fp_read, marker, le=1):
     try:
-        return __UNPACK_INT16(fp_read(2))[0]
+        return __UNPACK_INT16[le](fp_read(2))[0]
     except StructError as ex:
         raise_from(DecoderException('Failed to unpack int16'), ex)
 
 
-def __decode_int32(fp_read, marker):
+def __decode_int32(fp_read, marker, le=1):
     try:
-        return __UNPACK_INT32(fp_read(4))[0]
+        return __UNPACK_INT32[le](fp_read(4))[0]
     except StructError as ex:
         raise_from(DecoderException('Failed to unpack int32'), ex)
 
 
-def __decode_int64(fp_read, marker):
+def __decode_int64(fp_read, marker, le=1):
     try:
-        return __UNPACK_INT64(fp_read(8))[0]
+        return __UNPACK_INT64[le](fp_read(8))[0]
     except StructError as ex:
         raise_from(DecoderException('Failed to unpack int64'), ex)
 
-def __decode_uint16(fp_read, marker):
+def __decode_uint16(fp_read, marker, le=1):
     try:
-        return __UNPACK_UINT16(fp_read(2))[0]
+        return __UNPACK_UINT16[le](fp_read(2))[0]
     except StructError as ex:
         raise_from(DecoderException('Failed to unpack uint16'), ex)
 
 
-def __decode_uint32(fp_read, marker):
+def __decode_uint32(fp_read, marker, le=1):
     try:
-        return __UNPACK_UINT32(fp_read(4))[0]
+        return __UNPACK_UINT32[le](fp_read(4))[0]
     except StructError as ex:
         raise_from(DecoderException('Failed to unpack uint32'), ex)
 
 
-def __decode_uint64(fp_read, marker):
+def __decode_uint64(fp_read, marker, le=1):
     try:
-        return __UNPACK_UINT64(fp_read(8))[0]
+        return __UNPACK_UINT64[le](fp_read(8))[0]
     except StructError as ex:
         raise_from(DecoderException('Failed to unpack uint64'), ex)
 
 
-def __decode_float32(fp_read, marker):
+def __decode_float32(fp_read, marker, le=1):
     try:
-        return __UNPACK_FLOAT32(fp_read(4))[0]
+        return __UNPACK_FLOAT32[le](fp_read(4))[0]
     except StructError as ex:
         raise_from(DecoderException('Failed to unpack float32'), ex)
 
 
-def __decode_float64(fp_read, marker):
+def __decode_float64(fp_read, marker, le=1):
     try:
-        return __UNPACK_FLOAT64(fp_read(8))[0]
+        return __UNPACK_FLOAT64[le](fp_read(8))[0]
     except StructError as ex:
         raise_from(DecoderException('Failed to unpack float64'), ex)
 
 
-def __decode_char(fp_read, marker):
+def __decode_char(fp_read, marker, le=1):
     raw = fp_read(1)
     if not raw:
         raise DecoderException('Char missing')
@@ -177,9 +177,9 @@ def __decode_char(fp_read, marker):
         raise_from(DecoderException('Failed to decode char'), ex)
 
 
-def __decode_string(fp_read, marker):
+def __decode_string(fp_read, marker, le=1):
     # current marker is string identifier, so read next byte which identifies integer type
-    length = __decode_int_non_negative(fp_read, fp_read(1))
+    length = __decode_int_non_negative(fp_read, fp_read(1), le)
     raw = fp_read(length)
     if len(raw) < length:
         raise DecoderException('String too short')
@@ -190,8 +190,8 @@ def __decode_string(fp_read, marker):
 
 
 # same as string, except there is no 'S' marker
-def __decode_object_key(fp_read, marker, intern_object_keys):
-    length = __decode_int_non_negative(fp_read, marker)
+def __decode_object_key(fp_read, marker, intern_object_keys, le=1):
+    length = __decode_int_non_negative(fp_read, marker, le)
     raw = fp_read(length)
     if len(raw) < length:
         raise DecoderException('String too short')
@@ -201,9 +201,9 @@ def __decode_object_key(fp_read, marker, intern_object_keys):
         raise_from(DecoderException('Failed to decode object key'), ex)
 
 
-__METHOD_MAP = {TYPE_NULL: (lambda _, __: None),
-                TYPE_BOOL_TRUE: (lambda _, __: True),
-                TYPE_BOOL_FALSE: (lambda _, __: False),
+__METHOD_MAP = {TYPE_NULL: (lambda _, __, ___: None),
+                TYPE_BOOL_TRUE: (lambda _, __, ___: True),
+                TYPE_BOOL_FALSE: (lambda _, __, ___: False),
                 TYPE_INT8: __decode_int8,
                 TYPE_UINT8: __decode_uint8,
                 TYPE_INT16: __decode_int16,
@@ -224,7 +224,7 @@ def prodlist(mylist):
          result = result * x
     return result
 
-def __get_container_params(fp_read, in_mapping, no_bytes, object_hook, object_pairs_hook, intern_object_keys):
+def __get_container_params(fp_read, in_mapping, no_bytes, object_hook, object_pairs_hook, intern_object_keys, islittle):
     marker = fp_read(1)
     dims = []
     if marker == CONTAINER_TYPE:
@@ -238,10 +238,10 @@ def __get_container_params(fp_read, in_mapping, no_bytes, object_hook, object_pa
     if marker == CONTAINER_COUNT:
         marker = fp_read(1)
         if marker == ARRAY_START:
-            dims = __decode_array(fp_read, no_bytes, object_hook, object_pairs_hook, intern_object_keys)
+            dims = __decode_array(fp_read, no_bytes, object_hook, object_pairs_hook, intern_object_keys, islittle)
             count = prodlist(dims)
         else:
-            count = __decode_int_non_negative(fp_read, marker)
+            count = __decode_int_non_negative(fp_read, marker, islittle)
         counting = True
 
         # special cases (no data (None or bool) / bytes array) will be handled in calling functions
@@ -260,21 +260,23 @@ def __get_container_params(fp_read, in_mapping, no_bytes, object_hook, object_pa
 
 
 def __decode_object(fp_read, no_bytes, object_hook, object_pairs_hook,  # pylint: disable=too-many-branches
-                    intern_object_keys):
-    marker, counting, count, type_, dims = __get_container_params(fp_read, True, no_bytes,object_hook, object_pairs_hook,intern_object_keys)
+                    intern_object_keys, islittle):
+    marker, counting, count, type_, dims = __get_container_params(fp_read, True, no_bytes,object_hook, object_pairs_hook,intern_object_keys, islittle)
     has_pairs_hook = object_pairs_hook is not None
     obj = [] if has_pairs_hook else {}
 
+    le=islittle
+
     # special case - no data (None or bool)
     if type_ in __TYPES_NO_DATA:
-        value = __METHOD_MAP[type_](fp_read, type_)
+        value = __METHOD_MAP[type_](fp_read, type_, le)
         if has_pairs_hook:
             for _ in range(count):
-                obj.append((__decode_object_key(fp_read, fp_read(1), intern_object_keys), value))
+                obj.append((__decode_object_key(fp_read, fp_read(1), intern_object_keys, le), value))
             return object_pairs_hook(obj)
 
         for _ in range(count):
-            obj[__decode_object_key(fp_read, fp_read(1), intern_object_keys)] = value
+            obj[__decode_object_key(fp_read, fp_read(1), intern_object_keys, le)] = value
         return object_hook(obj)
 
     while count > 0 and (counting or marker != OBJECT_END):
@@ -283,12 +285,12 @@ def __decode_object(fp_read, no_bytes, object_hook, object_pairs_hook,  # pylint
             continue
 
         # decode key for object
-        key = __decode_object_key(fp_read, marker, intern_object_keys)
+        key = __decode_object_key(fp_read, marker, intern_object_keys, le)
         marker = fp_read(1) if type_ == TYPE_NONE else type_
 
         # decode value
         try:
-            value = __METHOD_MAP[marker](fp_read, marker)
+            value = __METHOD_MAP[marker](fp_read, marker, islittle)
         except KeyError:
             handled = False
         else:
@@ -297,9 +299,9 @@ def __decode_object(fp_read, no_bytes, object_hook, object_pairs_hook,  # pylint
         # handle outside above except (on KeyError) so do not have unfriendly "exception within except" backtrace
         if not handled:
             if marker == ARRAY_START:
-                value = __decode_array(fp_read, no_bytes, object_hook, object_pairs_hook, intern_object_keys)
+                value = __decode_array(fp_read, no_bytes, object_hook, object_pairs_hook, intern_object_keys, islittle)
             elif marker == OBJECT_START:
-                value = __decode_object(fp_read, no_bytes, object_hook, object_pairs_hook, intern_object_keys)
+                value = __decode_object(fp_read, no_bytes, object_hook, object_pairs_hook, intern_object_keys, islittle)
             else:
                 raise DecoderException('Invalid marker within object')
 
@@ -315,12 +317,12 @@ def __decode_object(fp_read, no_bytes, object_hook, object_pairs_hook,  # pylint
     return object_pairs_hook(obj) if has_pairs_hook else object_hook(obj)
 
 
-def __decode_array(fp_read, no_bytes, object_hook, object_pairs_hook, intern_object_keys):
-    marker, counting, count, type_, dims = __get_container_params(fp_read, False, no_bytes, object_hook, object_pairs_hook, intern_object_keys)
+def __decode_array(fp_read, no_bytes, object_hook, object_pairs_hook, intern_object_keys, islittle):
+    marker, counting, count, type_, dims = __get_container_params(fp_read, False, no_bytes, object_hook, object_pairs_hook, intern_object_keys, islittle)
 
     # special case - no data (None or bool)
     if type_ in __TYPES_NO_DATA:
-        return [__METHOD_MAP[type_](fp_read, type_)] * count
+        return [__METHOD_MAP[type_](fp_read, type_, islittle)] * count
 
     # special case - bytes array
     if type_ == TYPE_UINT8 and not no_bytes and len(dims)==0:
@@ -337,7 +339,7 @@ def __decode_array(fp_read, no_bytes, object_hook, object_pairs_hook, intern_obj
 
         # decode value
         try:
-            value = __METHOD_MAP[marker](fp_read, marker)
+            value = __METHOD_MAP[marker](fp_read, marker, islittle)
         except KeyError:
             handled = False
         else:
@@ -346,9 +348,9 @@ def __decode_array(fp_read, no_bytes, object_hook, object_pairs_hook, intern_obj
         # handle outside above except (on KeyError) so do not have unfriendly "exception within except" backtrace
         if not handled:
             if marker == ARRAY_START:
-                value = __decode_array(fp_read, no_bytes, object_hook, object_pairs_hook, intern_object_keys)
+                value = __decode_array(fp_read, no_bytes, object_hook, object_pairs_hook, intern_object_keys, islittle)
             elif marker == OBJECT_START:
-                value = __decode_object(fp_read, no_bytes, object_hook, object_pairs_hook, intern_object_keys)
+                value = __decode_object(fp_read, no_bytes, object_hook, object_pairs_hook, intern_object_keys, islittle)
             else:
                 raise DecoderException('Invalid marker within array')
 
@@ -369,7 +371,7 @@ def __object_hook_noop(obj):
     return obj
 
 
-def load(fp, no_bytes=False, object_hook=None, object_pairs_hook=None, intern_object_keys=False):
+def load(fp, no_bytes=False, object_hook=None, object_pairs_hook=None, intern_object_keys=False, islittle=True):
     """Decodes and returns UBJSON from the given file-like object
 
     Args:
@@ -388,6 +390,9 @@ def load(fp, no_bytes=False, object_hook=None, object_pairs_hook=None, intern_ob
                                    keys are used. NOTE: This is not supported
                                    in Python2 (since interning does not apply
                                    to unicode) and wil be ignored.
+        islittle (1 or 0): default is 1 for little-endian for all numerics (for 
+                            BJData Draft 2), change to 0 to use big-endian
+                            (for UBJSON for BJData Draft 1)
 
     Returns:
         Decoded object
@@ -440,13 +445,13 @@ def load(fp, no_bytes=False, object_hook=None, object_pairs_hook=None, intern_ob
             break
         try:
             try:
-                return __METHOD_MAP[marker](fp_read, marker)
+                return __METHOD_MAP[marker](fp_read, marker, islittle)
             except KeyError:
                 pass
             if marker == ARRAY_START:
-                newobj.append(__decode_array(fp_read, bool(no_bytes), object_hook, object_pairs_hook, intern_object_keys))
+                newobj.append(__decode_array(fp_read, bool(no_bytes), object_hook, object_pairs_hook, intern_object_keys, islittle))
             if marker == OBJECT_START:
-                newobj.append(__decode_object(fp_read, bool(no_bytes), object_hook, object_pairs_hook, intern_object_keys))
+                newobj.append(__decode_object(fp_read, bool(no_bytes), object_hook, object_pairs_hook, intern_object_keys, islittle))
             raise DecoderException('Invalid marker')
         except DecoderException as ex:
             if len(newobj)>0:
@@ -460,9 +465,9 @@ def load(fp, no_bytes=False, object_hook=None, object_pairs_hook=None, intern_ob
 
     return newobj;
 
-def loadb(chars, no_bytes=False, object_hook=None, object_pairs_hook=None, intern_object_keys=False):
+def loadb(chars, no_bytes=False, object_hook=None, object_pairs_hook=None, intern_object_keys=False, islittle=True):
     """Decodes and returns UBJSON from the given bytes or bytesarray object. See
        load() for available arguments."""
     with BytesIO(chars) as fp:
         return load(fp, no_bytes=no_bytes, object_hook=object_hook, object_pairs_hook=object_pairs_hook,
-                    intern_object_keys=intern_object_keys)
+                    intern_object_keys=intern_object_keys, islittle=islittle)
