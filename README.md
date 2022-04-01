@@ -5,9 +5,10 @@
 - Copyright: (C) Qianqian Fang (2020-2022) <q.fang at neu.edu>
 - Copyright: (C) Iotic Labs Ltd. (2016-2019) <vilnis.termanis at iotic-labs.com>
 - License: Apache License, Version 2.0
-- Version: 0.3
+- Version: 0.3.1
 - URL: https://pypi.org/project/bjdata/
 - Github: https://github.com/fangq/pybj
+- BJData Spec Version: [V1 Draft 2](https://neurojson.org/bjdata/draft2)
 - Acknowledgement: This project is supported by US National Institute of Health (NIH) grant U24-NS124027
 
 [![Build Status](https://travis-ci.com/fangq/pybj.svg?branch=master)](https://travis-ci.com/fangq/pybj)
@@ -135,7 +136,7 @@ This package was modified based on the py-ubjson package developed by
 Project URL: https://github.com/Iotic-Labs/py-ubjson
 
 The major changes were focused on supporting the Binary JData Specification 
-[Draft 2](https://github.com/NeuroJSON/bjdata/blob/master/Binary_JData_Specification.md.md) -
+[Draft 2](https://neurojson.org/bjdata/draft2) -
 an extended Universal Binary JSON (UBJSON) Specification Draft-12 by adding
 the below new features:
 
@@ -143,3 +144,4 @@ the below new features:
 * BJData supports an optimized ND array container
 * BJData does not convert NaN/Inf/-Inf to `null`
 * BJData uses little-Endian as the default integer/floating-point numbers while UBJSON uses big-Endian
+* BJData only permits non-zero-fixed-length data types (`UiuImlMLhdDC`) in strongly-typed array/object containers
