@@ -1,15 +1,16 @@
 Binary JData: A portable interchange format for complex binary data
 ============================================================
 
-- **Status of this document**: Request for comments.
+- **Status of this document**: Request for comments
 - **Maintainer**: Qianqian Fang <q.fang at neu.edu>
 - **License**: Apache License, Version 2.0
-- **Version**: 1 (Draft 2 - work-in-progress)
+- **Version**: 1 (Draft 2)
+- **Last Stable Release**: [Version 1 (Draft 2)](https://github.com/NeuroJSON/bjdata/blob/Draft_2/Binary_JData_Specification.md)
 - **Abstract**:
 
 > The Binary JData (BJData) Specification defines an efficient serialization 
 protocol for unambiguously storing complex and strongly-typed binary data found 
-in numerous application domains. The BJData specification is the binary counterpart
+in diverse applications. The BJData specification is the binary counterpart
 to the JSON format, both of which are used to serialize complex data structures
 supported by the JData specification (http://openjdata.org). The BJData spec is 
 derived and extended from the Universal Binary JSON (UBJSON, http://ubjson.org) 
@@ -38,8 +39,8 @@ applications. JSON presents numerous advantages, such as human readability,
 generality for accommodating complex hierarchical data, self-documentation, and 
 abundant existing free and commercial libraries. However, its utility is largely 
 restricted to the storage of lightweight textural data, and has very limited presence 
-in many data-intensive and performance-demanding applications, such as databases,
-medical imaging, and scientific data storage.
+in many data-intensive and performance-demanding applications, such as database
+backends, medical imaging, and scientific data storage.
  
 The lack of support for strongly-typed and binary data has been one of the main 
 barriers towards widespread adoption of JSON in these domains. In recent years, 
@@ -60,7 +61,7 @@ annotate and store complex data structures arising from diverse applications.
  
 The OpenJData framework first converts complex data structures, such as N-D
 arrays, trees, tables and graphs, into easy-to-serialize, portable data annotations
-via the **JData Specification** (https://github.com/fangq/jdata) and then serializes 
+via the **JData Specification** (https://github.com/NeuroJSON/jdata) and then serializes 
 and stores the annotated JData constructs using widely-supported data formats. 
 To balance data portability, readability and efficiency, OpenJData defines a 
 **dual-interface**: a text-based format **syntactically compatible with JSON**,
@@ -77,7 +78,7 @@ also allow a BJData file to store binary arrays larger than 4 GB in size, which
 is not currently possible with MessagePack (maximum data record size is limited
 to 4 GB) and BSON (maximum total file size is 4 GB).
  
-A key rationale for basing  the BJData format upon UBJSON as opposed to 
+A key rationale for basing the BJData format upon UBJSON as opposed to 
 other more popular binary JSON-like formats, such as BSON, CBOR and MessagePack, 
 is UBJSON's **quasi-human-readability** - a unique characteristic that is 
 absent from almost all other binary formats. This is because all data semantic 
@@ -93,7 +94,7 @@ inter-operate in complex applications.
 License
 ------------------------------
 
-The Binary JData Specification is licensed under the 
+The Binary JData Specification is licensed under the
 [Apache 2.0 License](http://www.apache.org/licenses/LICENSE-2.0.html).
 
 
@@ -127,8 +128,9 @@ communicate their value (e.g. `string`). In addition, some values (e.g. `array`)
 have additional (_optional_) parameters to improve decoding efficiency and/or 
 to reduce the size of the encoded value even further.
 
-- The BJData specification requires that all numeric values be written in 
-**Big-Endian order**.
+- The BJData specification (since Draft-2) requires that all numeric values must be
+written in the **Little-Endian order**. This is a breaking change compared to 
+BJData Draft-1 and UBJSON Draft-12, where numeric values are in Big-Endian order.
 
 - The `array` and `object` data types are **container** types, similar to JSON
 arrays and objects. They help partition and organize data records of all types, 
@@ -198,8 +200,7 @@ In BJData (using block-notation):
 ---
 ### <a name="value_noop"/>No-Op
 There is no equivalent to the `no-op` value in the original JSON specification. When 
-decoding, No-Op values should be skipped. Also, they can only occur as elements 
-of an `array` construct.
+decoding, No-Op values should be skipped.
 
 The intended usage of the `no-op` value is as a valueless signal between a 
 producer (most likely a server) and a consumer (most likely a client) to indicate 
@@ -257,9 +258,13 @@ and infinity are converted to [`null`](#value_null).
 
 #### Integer
 All integer types (`uint8`, `int8`, `uint16`, `int16`, `uint32`, `int32`, `uint64` and 
-`int64`) are written in **Big-Endian order**.
+`int64`) are written in **Little-Endian order** (this is different from UBJSON, where all
+integers are written in Big-Endian order).
 
 #### Float
+All float types (`half`, `single`, `double` are written in **Little-Endian order** 
+(this is different from UBJSON which does not specify the endianness of floats).
+
 - `float16` or half-precision values are written in [IEEE 754 half precision floating point 
 format](https://en.wikipedia.org/wiki/IEEE_754-2008_revision), which has the following 
 structure:
@@ -280,6 +285,7 @@ structure:
   - Bit 63 (1 bit) - sign
   - Bit 62-52 (11 bits) - exponent
   - Bit 51-0 (52 bits) - fraction (significant)
+
 
 #### High-Precision
 These are encoded as a string and thus are only limited by the maximum string 
@@ -449,14 +455,27 @@ array or object) are considered to be of that singular _type_ and, as a result,
 _type_ markers are omitted for each value within the container. This can be 
 thought of as providing the ability to create a strongly-typed container in BJData.
 
+A major different between BJData and UBJSON is that the _type_ in a BJData
+strongly-typed container is limited to **non-zero-fixed-length data types**, therefore,
+only integers (`i,U,I,u,l,m,L,M`), floating-point numbers (`h,d,D`) and char (`C`)
+are qualified. All zero-length types (`T,F,Z,N`), variable-length types(`S, H`)
+and container types (`[,{`) shall not be used in an optimized _type_ header.
+This restriction is set to reduce the security risks due to potentials of
+buffer-overflow attacks using [zero-length markers](https://github.com/nlohmann/json/issues/2793),
+hampered readability and dimished benefit using variable/container
+types in an optimized format.
+
+The requirements for _type_ are
+
+- If a _type_ is specified, it **must** be one of `i,U,I,u,l,m,L,M,h,d,D,C`.
 - If a _type_ is specified, it **must** be done so before a _count_.
 - If a _type_ is specified, a _count_ **must** be specified as well. (Otherwise 
 it is impossible to tell when a container is ending, e.g. did you just parse 
 *]* or the `int8` value of 93?)
 
-#### Example (string type):
+#### Example (uint8 type):
 ```
-[$][S]
+[$][U]
 ```
 
 ---
@@ -522,7 +541,7 @@ shall be stored as
 ### Additional rules
 - A _count_ **must** be >= 0.
 - A _count_ can be specified by itself.
-- If a _count_ is specified the container **must not** specify an end-marker.
+- If a _count_ is specified, the container **must not** specify an end-marker.
 - A container that specifies a _count_ **must** contain the specified number of 
 child elements.
 - If a _type_ is specified, it **must** be done so before _count_.
@@ -573,25 +592,6 @@ Optimized with both _type_ and _count_
 // No end marker since a count was specified.
 ```
 
----
-### Special case: Marker-only types (`null`, `no-op` & Boolean)
-If using both _count_ and _type_ optimizations, the marker itself represents the 
-value, thus saving repetition (since these types do not have a payload). 
-Additional examples are:
-
-Strongly typed array of type `true` (Boolean) and with a _count_ of 512:
-```
-[[][$][T][#][I][512]
-```
-
-Strongly typed object of type `null` and with a _count_ of 3:
-```
-[{][$][Z][#][i][3]
-    [i][4][name] // name only, no value specified.
-    [i][8][password]
-    [i][5][email]
-```
-
 Recommended File Specifiers
 ------------------------------
 
@@ -607,3 +607,7 @@ specification (Draft 12) developed by Riyad Kalla and other UBJSON contributors.
 The initial version of this MarkDown-formatted specification was derived from the 
 documentation included in the [Py-UBJSON](https://github.com/Iotic-Labs/py-ubjson/blob/dev-contrib/UBJSON-Specification.md) 
 repository (Commit 5ce1fe7).
+
+This specification was developed as part of the NeuroJSON project (http://neurojson.org) 
+with funding support from the US National Institute of Health (NIH) under
+grant [U24-NS124027](https://reporter.nih.gov/project-details/10308329).
