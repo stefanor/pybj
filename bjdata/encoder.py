@@ -5,7 +5,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     https://github.com/fangq/pybj/blob/master/LICENSE
+#     https://github.com/NeuroJSON/pybj/blob/master/LICENSE
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -240,7 +240,7 @@ def __encode_object(fp_write, item, seen_containers, container_count, sort_keys,
 
 
 def dump(obj, fp, container_count=False, sort_keys=False, no_float32=True, islittle=True, default=None):
-    """Writes the given object as UBJSON to the provided file-like object
+    """Writes the given object as BJData/UBJSON to the provided file-like object
 
     Args:
         obj: The object to encode
@@ -269,7 +269,7 @@ def dump(obj, fp, container_count=False, sort_keys=False, no_float32=True, islit
     subclasses):
 
     +------------------------------+-----------------------------------+
-    | Python                       | UBJSON                            |
+    | Python                       | BJData/UBJSON                     |
     +==============================+===================================+
     | (3) str                      | string                            |
     | (2) unicode                  |                                   |
@@ -318,7 +318,7 @@ def dump(obj, fp, container_count=False, sort_keys=False, no_float32=True, islit
 
 
 def dumpb(obj, container_count=False, sort_keys=False, no_float32=True, islittle=True, default=None):
-    """Returns the given object as UBJSON in a bytes instance. See dump() for
+    """Returns the given object as BJData/UBJSON in a bytes instance. See dump() for
        available arguments."""
     with BytesIO() as fp:
         dump(obj, fp, container_count=container_count, sort_keys=sort_keys, no_float32=no_float32, islittle=islittle, default=default)

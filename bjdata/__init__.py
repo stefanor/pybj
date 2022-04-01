@@ -5,7 +5,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     https://github.com/fangq/pybj/blob/master/LICENSE
+#     https://github.com/NeuroJSON/pybj/blob/master/LICENSE
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -38,6 +38,6 @@ except ImportError:  # pragma: no cover
 from .encoder import EncoderException
 from .decoder import DecoderException
 
-__version__ = '0.3.0'
+__version__ = '0.3.1'
 
 __all__ = ('EXTENSION_ENABLED', 'dump', 'dumpb', 'EncoderException', 'load', 'loadb', 'DecoderException')

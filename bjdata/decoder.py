@@ -5,7 +5,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     https://github.com/fangq/pybj/blob/master/LICENSE
+#     https://github.com/NeuroJSON/pybj/blob/master/LICENSE
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -372,7 +372,7 @@ def __object_hook_noop(obj):
 
 
 def load(fp, no_bytes=False, object_hook=None, object_pairs_hook=None, intern_object_keys=False, islittle=True):
-    """Decodes and returns UBJSON from the given file-like object
+    """Decodes and returns BJData/UBJSON from the given file-like object
 
     Args:
         fp: read([size])-able object
@@ -400,11 +400,11 @@ def load(fp, no_bytes=False, object_hook=None, object_pairs_hook=None, intern_ob
     Raises:
         DecoderException: If an encoding failure occured.
 
-    UBJSON types are mapped to Python types as follows.  Numbers in brackets
-    denote Python version.
+    BJData/UBJSON types are mapped to Python types as follows.  Numbers in
+    brackets denote Python version.
 
         +----------------------------------+---------------+
-        | UBJSON                           | Python        |
+        | BJData/UBJSON                    | Python        |
         +==================================+===============+
         | object                           | dict          |
         +----------------------------------+---------------+
@@ -466,7 +466,7 @@ def load(fp, no_bytes=False, object_hook=None, object_pairs_hook=None, intern_ob
     return newobj;
 
 def loadb(chars, no_bytes=False, object_hook=None, object_pairs_hook=None, intern_object_keys=False, islittle=True):
-    """Decodes and returns UBJSON from the given bytes or bytesarray object. See
+    """Decodes and returns BJData/UBJSON from the given bytes or bytesarray object. See
        load() for available arguments."""
     with BytesIO(chars) as fp:
         return load(fp, no_bytes=no_bytes, object_hook=object_hook, object_pairs_hook=object_pairs_hook,
