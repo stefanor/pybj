@@ -26,13 +26,16 @@ from .markers import (TYPE_NONE, TYPE_NULL, TYPE_NOOP, TYPE_BOOL_TRUE, TYPE_BOOL
                       TYPE_INT16, TYPE_INT32, TYPE_INT64, TYPE_FLOAT32, TYPE_FLOAT64, TYPE_HIGH_PREC, TYPE_CHAR,
 		      TYPE_UINT16, TYPE_UINT32, TYPE_UINT64, TYPE_FLOAT16,
                       TYPE_STRING, OBJECT_START, OBJECT_END, ARRAY_START, ARRAY_END, CONTAINER_TYPE, CONTAINER_COUNT)
-from numpy import array as ndarray, dtype as npdtype
+from numpy import array as ndarray, dtype as npdtype, frombuffer as buffer2numpy
+from array import array as typedarray
 
 __TYPES = frozenset((TYPE_NULL, TYPE_BOOL_TRUE, TYPE_BOOL_FALSE, TYPE_INT8, TYPE_UINT8, TYPE_INT16, TYPE_INT32,
                      TYPE_INT64, TYPE_FLOAT32, TYPE_FLOAT64, TYPE_UINT16, TYPE_UINT32, TYPE_UINT64, TYPE_FLOAT16, 
 		     TYPE_HIGH_PREC, TYPE_CHAR, TYPE_STRING, ARRAY_START, OBJECT_START))
 __TYPES_NO_DATA = frozenset((TYPE_NULL, TYPE_BOOL_FALSE, TYPE_BOOL_TRUE))
 __TYPES_INT = frozenset((TYPE_INT8, TYPE_UINT8, TYPE_INT16, TYPE_INT32, TYPE_INT64, TYPE_UINT16, TYPE_UINT32, TYPE_UINT64))
+__TYPES_FIXLEN = frozenset((TYPE_INT8, TYPE_UINT8, TYPE_INT16, TYPE_INT32, TYPE_INT64, TYPE_UINT16, TYPE_UINT32, TYPE_UINT64,
+                     TYPE_FLOAT16, TYPE_FLOAT32, TYPE_FLOAT64, TYPE_CHAR))
 
 __SMALL_INTS_DECODED = [{pack('>b', i): i for i in range(-128, 128)}, {pack('<b', i): i for i in range(-128, 128)}]
 __SMALL_UINTS_DECODED = [{pack('>B', i): i for i in range(256)}, {pack('<B', i): i for i in range(256)}]
@@ -49,14 +52,28 @@ __UNPACK_FLOAT64 = [Struct('>d').unpack, Struct('<d').unpack]
 __DTYPE_MAP = { TYPE_INT8: 'b',
                 TYPE_UINT8: 'B',
                 TYPE_INT16: 'h',
-		TYPE_UINT16: 'H',
+                TYPE_UINT16: 'H',
                 TYPE_INT32: 'i',
-		TYPE_UINT32: 'I',
+                TYPE_UINT32: 'I',
                 TYPE_INT64: 'q',
-		TYPE_UINT64: 'Q',
-		TYPE_FLOAT32: 'h',
+                TYPE_UINT64: 'Q',
+                TYPE_FLOAT16: 'h',
                 TYPE_FLOAT32: 'f',
-                TYPE_FLOAT64: 'd'}
+                TYPE_FLOAT64: 'd',
+                TYPE_CHAR: 'c'}
+
+__DTYPELEN_MAP={ TYPE_INT8: 1,
+                TYPE_UINT8: 1,
+                TYPE_INT16: 2,
+                TYPE_UINT16: 2,
+                TYPE_INT32: 4,
+                TYPE_UINT32: 4,
+                TYPE_INT64: 8,
+                TYPE_UINT64: 8,
+                TYPE_FLOAT16: 2,
+                TYPE_FLOAT32: 4,
+                TYPE_FLOAT64: 8,
+                TYPE_CHAR: 1}
 
 class DecoderException(ValueError):
     """Raised when decoding of a UBJSON stream fails."""
@@ -329,6 +346,19 @@ def __decode_array(fp_read, no_bytes, object_hook, object_pairs_hook, intern_obj
         container = fp_read(count)
         if len(container) < count:
             raise DecoderException('Container bytes array too short')
+        return container
+
+    if type_ in __TYPES_FIXLEN and count>0:
+        container = fp_read(count*__DTYPELEN_MAP[type_])
+        if len(container) < count*__DTYPELEN_MAP[type_]:
+            raise DecoderException('Container bytes array too short')
+
+        #container=typedarray(__DTYPE_MAP[type_], container)
+        if len(dims)>0:
+            container=buffer2numpy(container, dtype=npdtype(__DTYPE_MAP[type_]))
+            container=container.reshape(dims)
+        else:
+            container=buffer2numpy(container, dtype=npdtype(__DTYPE_MAP[type_]))
         return container
 
     container = []

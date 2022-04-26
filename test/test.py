@@ -34,6 +34,7 @@ from bjdata.compat import INTEGER_TYPES
 from bjdata.encoder import dump as bjdpuredump, dumpb as bjdpuredumpb
 from bjdata.decoder import load as bjdpureload, loadb as bjdpureloadb
 from numpy import array as ndarray, int8 as npint8
+from array import array as typedarray
 
 PY2 = version_info[0] < 3
 
@@ -263,7 +264,7 @@ class TestEncodeDecodePlain(TestCase):  # pylint: disable=too-many-public-method
         for cast in (bytes, bytearray):
             self.check_enc_dec(cast(b''))
             self.check_enc_dec(cast(b'\x01' * 4))
-            self.assertEqual(self.bjdloadb(self.bjddumpb(cast(b'\x04' * 4)), no_bytes=True), [4] * 4)
+            self.assertEqual((self.bjdloadb(self.bjddumpb(cast(b'\x04' * 4)), no_bytes=True) == ndarray([4] * 4, npint8)).all(), True)
             self.check_enc_dec(cast(b'largebinary' * 100))
 
     def test_nd_array(self):
@@ -286,7 +287,7 @@ class TestEncodeDecodePlain(TestCase):  # pylint: disable=too-many-public-method
                 self.bjdloadb(ARRAY_START + CONTAINER_TYPE + bjd_type + CONTAINER_COUNT + TYPE_UINT8 + b'\x05'),
                 [py_obj] * 5
             )
-        self.assertEqual(self.bjdloadb(raw_start + b'\x03' + (b'\x01' * 3)), [1, 1, 1])
+        self.assertEqual((self.bjdloadb(raw_start + b'\x03' + (b'\x01' * 3))==ndarray([1, 1, 1], dtype=npint8)).all(), True)
 
         # invalid type
         with self.assertRaises(DecoderException):

@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+//#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+
 #include <Python.h>
 #include <bytesobject.h>
 #include <numpy/arrayobject.h>
@@ -143,6 +145,7 @@ static PyObject* _decode_char(_bjdata_decoder_buffer_t *buffer);
 static PyObject* _decode_string(_bjdata_decoder_buffer_t *buffer);
 static _container_params_t _get_container_params(_bjdata_decoder_buffer_t *buffer, int in_mapping, unsigned int *ndim, long long **dims);
 static int _is_no_data_type(char type);
+static int _is_fixed_len_type(char type);
 static int _get_type_info(char type, int *bytelen);
 static PyObject* _no_data_type(char type);
 static PyObject* _decode_array(_bjdata_decoder_buffer_t *buffer);
@@ -794,6 +797,12 @@ static int _is_no_data_type(char type) {
     return ((TYPE_NULL == type) || (TYPE_BOOL_TRUE == type) || (TYPE_BOOL_FALSE == type));
 }
 
+static int _is_fixed_len_type(char type) {
+    return ((TYPE_INT8 == type) || (TYPE_UINT8 == type) || (TYPE_INT16 == type)
+         || (TYPE_UINT16 == type) || (TYPE_INT32 == type) || (TYPE_UINT32 == type)
+         || (TYPE_INT64 == type) || (TYPE_UINT64 == type) || (TYPE_CHAR == type)
+         || (TYPE_FLOAT16 == type) || (TYPE_FLOAT32 == type) || (TYPE_FLOAT64 == type));
+}
 
 // Note: Does NOT reserve a new reference
 static int _get_type_info(char type, int *bytelen) {
@@ -831,6 +840,9 @@ static int _get_type_info(char type, int *bytelen) {
         case TYPE_UINT64:
 	    *bytelen=8;
             return PyArray_ULONGLONG;
+        case TYPE_CHAR:
+	    *bytelen=1;
+            return PyArray_CHAR;
         default:
 	    *bytelen=0;
             PyErr_SetString(PyExc_RuntimeError, "Internal error - _get_type_info");
@@ -865,15 +877,14 @@ static PyObject* _decode_array(_bjdata_decoder_buffer_t *buffer) {
         goto bail;
     }
     marker = params.marker;
-
     if (params.counting) {
         // special case - byte array
         if ((TYPE_UINT8 == params.type) && !buffer->prefs.no_bytes && ndims==0) {
             BAIL_ON_NULL(list = PyBytes_FromStringAndSize(NULL, params.count));
             READ_INTO_OR_BAIL(params.count, PyBytes_AS_STRING(list), "bytes array");
             return list;
-        // special case - no data types
-        } else if (ndims) {
+        // special case - nd-array
+        } else if (ndims && params.type) {
 	    unsigned int i;
             int bytelen=0;
 	    npy_intp *arraydim=calloc(sizeof(npy_intp),ndims);
@@ -897,6 +908,16 @@ static PyObject* _decode_array(_bjdata_decoder_buffer_t *buffer) {
                 Py_INCREF(value);
             }
             value = NULL;
+        } else if (_is_fixed_len_type(params.type) && params.count > 0) { // 1d packed array
+            int bytelen=0;
+	    npy_intp *arraydim=calloc(sizeof(npy_intp),1);
+	    int pytype=_get_type_info(params.type,&bytelen);
+	    PyArrayObject *jdarray=NULL;
+            arraydim[0]=params.count;
+            BAIL_ON_NULL(jdarray = (PyArrayObject *) PyArray_SimpleNew(1, arraydim, pytype));
+            READ_INTO_OR_BAIL(bytelen*params.count, (char *)PyArray_DATA(jdarray), "1D packed array");
+	    free(arraydim);
+            return PyArray_Return(jdarray);
         // take advantage of faster creation/setting of list since count known
         } else {
             Py_ssize_t list_pos = 0; // position in list for far fast setting via PyList_SET_ITEM
