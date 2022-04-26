@@ -349,7 +349,10 @@ def __decode_array(fp_read, no_bytes, object_hook, object_pairs_hook, intern_obj
         return container
 
     if type_ in __TYPES_FIXLEN and count>0:
-        container = fp_read(count*__DTYPELEN_MAP[type_])
+        if hasattr(count, 'dtype'):
+            container = fp_read(count.item()*__DTYPELEN_MAP[type_])
+        else:
+            container = fp_read(count*__DTYPELEN_MAP[type_])
         if len(container) < count*__DTYPELEN_MAP[type_]:
             raise DecoderException('Container bytes array too short')
 
