@@ -1,3 +1,5 @@
+![](https://neurojson.org/wiki/upload/neurojson_banner_long.png)
+
 # Binary JData for Python - a lightweight binary JSON format
 
 - Copyright: (C) Qianqian Fang (2020-2022) <q.fang at neu.edu>
