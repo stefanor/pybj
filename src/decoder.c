@@ -830,10 +830,10 @@ static int _get_type_info(char type, int *bytelen) {
             return PyArray_USHORT;
         case TYPE_INT32:
 	    *bytelen=4;
-            return PyArray_LONG;
+            return PyArray_INT;
         case TYPE_UINT32:
 	    *bytelen=4;
-            return PyArray_ULONG;
+            return PyArray_UINT;
         case TYPE_INT64:
 	    *bytelen=8;
             return PyArray_LONGLONG;

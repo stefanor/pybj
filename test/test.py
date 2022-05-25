@@ -33,6 +33,7 @@ from bjdata.compat import INTEGER_TYPES
 # Pure Python versions
 from bjdata.encoder import dump as bjdpuredump, dumpb as bjdpuredumpb
 from bjdata.decoder import load as bjdpureload, loadb as bjdpureloadb
+import numpy as np
 from numpy import array as ndarray, int8 as npint8
 from array import array as typedarray
 
@@ -178,6 +179,30 @@ class TestEncodeDecodePlain(TestCase):  # pylint: disable=too-many-public-method
                 (TYPE_HIGH_PREC, -9223372036854775809, 23),
                 (TYPE_HIGH_PREC, 9999999999999999999999999999999999999, 40)):
             self.check_enc_dec(value, total_size, expected_type=type_)
+
+        self.assertEqual((self.bjdloadb(b'[$U#U\x08\x01\x02\x03\x04\x05\x06\x07\x08')
+            ==b'\x01\x02\x03\x04\x05\x06\x07\x08'), True)
+
+        self.assertEqual((self.bjdloadb(b'[$u#U\x04\x01\x02\x03\x04\x05\x06\x07\x08')
+            ==ndarray([513, 1027, 1541, 2055], np.uint16)).all(), True)
+
+        self.assertEqual((self.bjdloadb(b'[$m#U\x02\x01\x02\x03\x04\x05\x06\x07\x08')
+            ==ndarray([67305985, 134678021], np.uint32)).all(), True)
+
+        self.assertEqual((self.bjdloadb(b'[$M#U\x01\x01\x02\x03\x04\x05\x06\x07\x08')
+            ==ndarray([578437695752307201], np.uint64)).all(), True)
+
+        self.assertEqual((self.bjdloadb(b'[$i#U\x08\xf1\xf2\xf3\xf4\xf5\xf6\xf7\xf8')
+            ==ndarray([-15, -14, -13, -12, -11, -10,  -9,  -8], np.int8)).all(), True)
+
+        self.assertEqual((self.bjdloadb(b'[$I#U\x04\xf1\xf2\xf3\xf4\xf5\xf6\xf7\xf8')
+            ==ndarray([-3343, -2829, -2315, -1801], np.int16)).all(), True)
+
+        self.assertEqual((self.bjdloadb(b'[$l#U\x02\xf1\xf2\xf3\xf4\xf5\xf6\xf7\xf8')
+            ==ndarray([-185339151, -117967115], np.int32)).all(), True)
+
+        self.assertEqual((self.bjdloadb(b'[$L#U\x01\xf1\xf2\xf3\xf4\xf5\xf6\xf7\xf8')
+            ==ndarray([-506664896818842895], np.int64)).all(), True)
 
     def test_high_precision(self):
         self.assertEqual(self.bjddumpb(Decimal(-1.5)),
