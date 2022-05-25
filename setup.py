@@ -20,6 +20,7 @@ import os
 import warnings
 from glob import glob
 from platform import python_implementation
+import numpy
 
 # Allow for environments without setuptools
 try:
@@ -72,7 +73,7 @@ COMPILE_ARGS = ['-std=c99', '-DUSE__BJDATA']
 
 setup(
     name='bjdata',
-    version='0.3.3',
+    version='0.3.4',
     description='Binary JData and UBJSON encoder/decoder',
     long_description=load_description('README.md'),
     long_description_content_type='text/markdown',
@@ -96,6 +97,7 @@ setup(
     ext_modules=([Extension(
         '_bjdata',
         sorted(glob('src/*.c')),
+        include_dirs=[numpy.get_include()],
         extra_compile_args=COMPILE_ARGS,
         # undef_macros=['NDEBUG']
     )] if BUILD_EXTENSIONS else []),

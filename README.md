@@ -5,13 +5,13 @@
 - Copyright: (C) Qianqian Fang (2020-2022) <q.fang at neu.edu>
 - Copyright: (C) Iotic Labs Ltd. (2016-2019) <vilnis.termanis at iotic-labs.com>
 - License: Apache License, Version 2.0
-- Version: 0.3.3
+- Version: 0.3.4
 - URL: https://pypi.org/project/bjdata/
-- Github: https://github.com/fangq/pybj
+- Github: https://github.com/NeuroJSON/pybj
 - BJData Spec Version: [V1 Draft 2](https://neurojson.org/bjdata/draft2)
 - Acknowledgement: This project is supported by US National Institute of Health (NIH) grant U24-NS124027
 
-[![Build Status](https://travis-ci.com/fangq/pybj.svg?branch=master)](https://travis-ci.com/fangq/pybj)
+[![Build Status](https://travis-ci.com/NeuroJSON/pybj.svg?branch=master)](https://travis-ci.com/NeuroJSON/pybj)
 
 This is a Python v3.2+ (and 2.7+) [Binary JData](http://neurojson.org) based on 
 the [Draft-2](Binary_JData_Specification.md) specification.
