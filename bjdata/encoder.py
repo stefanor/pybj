@@ -40,6 +40,21 @@ __PACK_FLOAT16 = [Struct('>h').pack, Struct('<h').pack]
 __PACK_FLOAT32 = [Struct('>f').pack, Struct('<f').pack]
 __PACK_FLOAT64 = [Struct('>d').pack, Struct('<d').pack]
 
+__DTYPE_TO_MARKER = {
+    'i1' : TYPE_INT8,
+    'i2' : TYPE_INT16,
+    'i4' : TYPE_INT32,
+    'i8' : TYPE_INT64,
+    'u1' : TYPE_UINT8,
+    'u2' : TYPE_UINT16,
+    'u4' : TYPE_UINT32,
+    'u8' : TYPE_UINT64,
+    'f2' : TYPE_FLOAT16,
+    'f4' : TYPE_FLOAT32,
+    'f8' : TYPE_FLOAT64,
+    'b1' : TYPE_INT8,
+    'S1' : TYPE_CHAR
+}
 
 # Prefix applicable to specialised byte array container
 __BYTES_ARRAY_PREFIX = ARRAY_START + CONTAINER_TYPE + TYPE_UINT8 + CONTAINER_COUNT
@@ -181,6 +196,9 @@ def __encode_value(fp_write, item, seen_containers, container_count, sort_keys, 
     elif default is not None:
         __encode_value(fp_write, default(item), seen_containers, container_count, sort_keys, no_float32, islittle, default)
 
+    elif type(item).__module__ == "numpy":
+        __encode_numpy(fp_write, item, islittle, default)
+
     else:
         raise EncoderException('Cannot encode item of type %s' % type(item))
 
@@ -237,6 +255,47 @@ def __encode_object(fp_write, item, seen_containers, container_count, sort_keys,
         fp_write(OBJECT_END)
 
     del seen_containers[container_id]
+
+def __map_dtype(dtypestr):
+    if len(dtypestr) == 3 and (dtypestr.startswith('<') or dtypestr.startswith('|') or dtypestr.startswith('>')):
+        return __DTYPE_TO_MARKER[dtypestr[1:3]]
+    else:
+        raise Exception("bjdata", "numpy dtype {} is not supported".format(dtypestr))
+
+def __encode_numpy(fp_write, item, islittle, default):
+    try:
+        import numpy as np
+    except ImportError:
+        raise Exception("bjdata", "you must install 'numpy' to encode this data")
+
+    # TODO: need to detect big-endian data and swap bytes
+    if(np.isscalar(item)):
+        fp_write(__map_dtype(item.dtype.str))
+        fp_write(item.data)
+        return
+
+    if not (type(item).__name__ == 'ndarray' or type(item).__name__ == 'chararray'):
+        raise Exception("bjdata", "only numerical scalars and ndarrays are supported for numpy data")
+
+    if(item.dtype.str[1] == 'U' or item.dtype.str[1] == 'S') and item.ndim == 0:
+        fp_write(TYPE_STRING)
+        __encode_int(fp_write, int(item.dtype.str[2:]) * (4 if item.dtype.str[1] == 'U' else 1), islittle)
+        fp_write(item.data)
+        return
+
+    if(np.isfortran(item)):
+        item = np.array( item, order = 'C')  # currently, BJData ND-array syntax only support row-major
+
+    fp_write(ARRAY_START + CONTAINER_TYPE + __map_dtype(item.dtype.str) + CONTAINER_COUNT)
+    if item.ndim == 1:
+        __encode_int(fp_write, len(item), islittle)
+    else:
+        fp_write(ARRAY_START)
+        for value in item.shape:
+            __encode_int(fp_write, value, islittle)
+        fp_write(ARRAY_END)
+
+    fp_write(item.data)
 
 
 def dump(obj, fp, container_count=False, sort_keys=False, no_float32=True, islittle=True, default=None):
