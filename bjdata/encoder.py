@@ -158,7 +158,8 @@ def __encode_bytes(fp_write, item, le=1):
 
 
 def __encode_value(fp_write, item, seen_containers, container_count, sort_keys, no_float32, islittle, default):
-    le=islittle;
+    le=islittle
+
     if isinstance(item, UNICODE_TYPE):
         __encode_string(fp_write, item, le)
 
@@ -171,7 +172,7 @@ def __encode_value(fp_write, item, seen_containers, container_count, sort_keys, 
     elif item is False:
         fp_write(TYPE_BOOL_FALSE)
 
-    elif isinstance(item, INTEGER_TYPES):
+    elif isinstance(item, INTEGER_TYPES) and not (type(item).__module__ == "numpy"):
         __encode_int(fp_write, item, le)
 
     elif isinstance(item, float):

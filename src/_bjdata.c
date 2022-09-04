@@ -21,6 +21,10 @@
 #include "encoder.h"
 #include "decoder.h"
 
+#define PY_ARRAY_UNIQUE_SYMBOL bjdata_numpy_array
+#define NPY_NO_DEPRECATED_API 0
+#include <numpy/arrayobject.h>
+
 /******************************************************************************/
 
 // container_count, sort_keys, no_float32, islittle
@@ -233,6 +237,7 @@ init_bjdata(void)
     PyObject *module = Py_InitModule("_bjdata", UbjsonMethods);
 #endif
 
+    import_array();
     BAIL_ON_NONZERO(_bjdata_encoder_init());
     BAIL_ON_NONZERO(_bjdata_decoder_init());
 

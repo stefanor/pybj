@@ -26,7 +26,7 @@ from .markers import (TYPE_NONE, TYPE_NULL, TYPE_NOOP, TYPE_BOOL_TRUE, TYPE_BOOL
                       TYPE_INT16, TYPE_INT32, TYPE_INT64, TYPE_FLOAT32, TYPE_FLOAT64, TYPE_HIGH_PREC, TYPE_CHAR,
 		      TYPE_UINT16, TYPE_UINT32, TYPE_UINT64, TYPE_FLOAT16,
                       TYPE_STRING, OBJECT_START, OBJECT_END, ARRAY_START, ARRAY_END, CONTAINER_TYPE, CONTAINER_COUNT)
-from numpy import array as ndarray, dtype as npdtype, frombuffer as buffer2numpy
+from numpy import array as ndarray, dtype as npdtype, frombuffer as buffer2numpy, half as halfprec
 from array import array as typedarray
 
 __TYPES = frozenset((TYPE_NULL, TYPE_BOOL_TRUE, TYPE_BOOL_FALSE, TYPE_INT8, TYPE_UINT8, TYPE_INT16, TYPE_INT32,
@@ -170,6 +170,12 @@ def __decode_uint64(fp_read, marker, le=1):
         raise_from(DecoderException('Failed to unpack uint64'), ex)
 
 
+def __decode_float16(fp_read, marker, le=1):
+    try:
+        return __UNPACK_FLOAT16[le](fp_read(2))[0]
+    except StructError as ex:
+        raise_from(DecoderException('Failed to unpack float16'), ex)
+
 def __decode_float32(fp_read, marker, le=1):
     try:
         return __UNPACK_FLOAT32[le](fp_read(4))[0]
@@ -229,6 +235,7 @@ __METHOD_MAP = {TYPE_NULL: (lambda _, __, ___: None),
 		TYPE_UINT32: __decode_uint32,
                 TYPE_INT64: __decode_int64,
 		TYPE_UINT64: __decode_uint64,
+                TYPE_FLOAT16: __decode_float16,
                 TYPE_FLOAT32: __decode_float32,
                 TYPE_FLOAT64: __decode_float64,
                 TYPE_HIGH_PREC: __decode_high_prec,

@@ -15,10 +15,12 @@
  * limitations under the License.
  */
 
-//#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
-
 #include <Python.h>
 #include <bytesobject.h>
+
+#define NO_IMPORT_ARRAY
+#define PY_ARRAY_UNIQUE_SYMBOL bjdata_numpy_array
+#define NPY_NO_DEPRECATED_API 0
 #include <numpy/arrayobject.h>
 
 #include "common.h"
@@ -449,7 +451,7 @@ static PyObject* _decode_uint16_32(_bjdata_decoder_buffer_t *buffer, Py_ssize_t 
         }
     }
 #if PY_MAJOR_VERSION < 3
-    return PyLong_FromUnsignedLong(value);
+    return PyInt_FromLong(value);
 #else
     return PyLong_FromUnsignedLong(value);
 #endif
@@ -842,7 +844,7 @@ static int _get_type_info(char type, int *bytelen) {
             return PyArray_ULONGLONG;
         case TYPE_CHAR:
 	    *bytelen=1;
-            return PyArray_CHAR;
+            return PyArray_STRING;
         default:
 	    *bytelen=0;
             PyErr_SetString(PyExc_RuntimeError, "Internal error - _get_type_info");
@@ -1211,6 +1213,7 @@ PyObject* _bjdata_decode_value(_bjdata_decoder_buffer_t *buffer, char *given_mar
 #ifdef USE__BJDATA
         case TYPE_UINT8:
             RETURN_OR_RAISE_DECODER_EXCEPTION(_decode_uint8(buffer), "uint8");
+        case TYPE_FLOAT16:
         case TYPE_UINT16:
             RETURN_OR_RAISE_DECODER_EXCEPTION(_decode_uint16_32(buffer, 2), "uint16");
         case TYPE_UINT32:
@@ -1240,10 +1243,6 @@ bail:
     return NULL;
 }
 
-PyMODINIT_FUNC _bjdata_init_numpy(void) {
-    import_array();
-}
-
 /******************************************************************************/
 
 int _bjdata_decoder_init(void) {
@@ -1266,7 +1265,6 @@ int _bjdata_decoder_init(void) {
     }
     PyDec_Type = (PyTypeObject*) tmp_obj;
     Py_CLEAR(tmp_module);
-    _bjdata_init_numpy();
 
     return 0;
 

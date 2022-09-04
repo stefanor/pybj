@@ -17,6 +17,12 @@
 
 #include <Python.h>
 #include <bytesobject.h>
+#include <string.h>
+
+#define NO_IMPORT_ARRAY
+#define PY_ARRAY_UNIQUE_SYMBOL bjdata_numpy_array
+#define NPY_NO_DEPRECATED_API 0
+#include <numpy/arrayobject.h>
 
 #include "common.h"
 #include "markers.h"
@@ -76,6 +82,38 @@ static int _encode_PyInt(PyObject *obj, _bjdata_encoder_buffer_t *buffer);
 static int _encode_PySequence(PyObject *obj, _bjdata_encoder_buffer_t *buffer);
 static int _encode_mapping_key(PyObject *obj, _bjdata_encoder_buffer_t *buffer);
 static int _encode_PyMapping(PyObject *obj, _bjdata_encoder_buffer_t *buffer);
+
+const int numpytypes[][2] = {
+    {NPY_BOOL,       TYPE_UINT8},
+    {NPY_BYTE,       TYPE_INT8},
+    {NPY_INT8,       TYPE_INT8},
+    {NPY_SHORT,      TYPE_INT16},
+    {NPY_INT16,      TYPE_INT16},
+    {NPY_INT,        TYPE_INT32},
+    {NPY_INT32,      TYPE_INT32},
+    {NPY_LONGLONG,   TYPE_INT64},
+    {NPY_INT64,      TYPE_INT64},
+    {NPY_UINT8,      TYPE_UINT8},
+    {NPY_UBYTE,      TYPE_UINT8},
+    {NPY_USHORT,     TYPE_UINT16},
+    {NPY_UINT16,     TYPE_UINT16},
+    {NPY_UINT,       TYPE_UINT32},
+    {NPY_UINT32,     TYPE_UINT32},
+    {NPY_ULONGLONG,  TYPE_UINT64},
+    {NPY_UINT64,     TYPE_UINT64},
+    {NPY_HALF,       TYPE_FLOAT16},
+    {NPY_FLOAT16,    TYPE_FLOAT16},
+    {NPY_FLOAT,      TYPE_FLOAT32},
+    {NPY_FLOAT32,    TYPE_FLOAT32},
+    {NPY_DOUBLE,     TYPE_FLOAT64},
+    {NPY_FLOAT64,    TYPE_FLOAT64},
+    {NPY_CFLOAT,     TYPE_FLOAT32},
+    {NPY_COMPLEX64,  TYPE_FLOAT32},
+    {NPY_CDOUBLE,    TYPE_FLOAT64},
+    {NPY_COMPLEX128, TYPE_FLOAT64},
+    {NPY_STRING,     TYPE_STRING},
+    {NPY_UNICODE,    TYPE_STRING}
+};
 
 /******************************************************************************/
 
@@ -226,6 +264,71 @@ static int _encode_PyByteArray(PyObject *obj, _bjdata_encoder_buffer_t *buffer) 
     WRITE_OR_BAIL(bytes_array_prefix, sizeof(bytes_array_prefix));
     BAIL_ON_NONZERO(_encode_longlong(len, buffer));
     WRITE_OR_BAIL(raw, len);
+    // no ARRAY_END since length was specified
+
+    return 0;
+
+bail:
+    return 1;
+}
+
+/******************************************************************************/
+
+static int _lookup_marker(npy_intp numpytypeid) {
+    int i, len = (sizeof(numpytypes) >> 3);
+    for(i = 0; i < len; i++){
+        if(numpytypeid == (npy_intp)numpytypes[i][0])
+            return numpytypes[i][1];
+    }
+    return -1;
+}
+
+static int _encode_NDarray(PyObject *obj, _bjdata_encoder_buffer_t *buffer) {
+    PyArrayObject *arr;
+    Py_INCREF(obj);
+    arr = (PyArrayObject *)PyArray_EnsureArray(obj);
+    BAIL_ON_NONZERO(arr == NULL);
+
+    int ndim = PyArray_NDIM(arr);
+    int type = PyArray_TYPE(arr);
+    npy_intp bytes = PyArray_ITEMSIZE(arr);
+
+    int marker = _lookup_marker(type);
+
+    BAIL_ON_NONZERO(marker < 0)
+    if(ndim == 0){  /*scalar*/
+        WRITE_CHAR_OR_BAIL((char)marker);
+        if(marker == TYPE_STRING) {
+            _encode_longlong(bytes, buffer);
+        }
+        WRITE_OR_BAIL(PyArray_BYTES(arr), bytes);
+        Py_DECREF(arr);
+        return 0;
+    }
+
+    npy_intp * dims = PyArray_DIMS(arr);
+    npy_intp total = PyArray_SIZE(arr);
+
+    WRITE_CHAR_OR_BAIL(ARRAY_START);
+    WRITE_CHAR_OR_BAIL(CONTAINER_TYPE);
+    if(marker == TYPE_STRING) {
+        WRITE_CHAR_OR_BAIL(TYPE_CHAR);
+    } else {
+        WRITE_CHAR_OR_BAIL((char)marker);
+    }
+    WRITE_CHAR_OR_BAIL(CONTAINER_COUNT);
+    if(ndim == 1) {
+        BAIL_ON_NONZERO(_encode_longlong(bytes, buffer));
+    } else {
+        WRITE_CHAR_OR_BAIL(ARRAY_START);
+        for(int i=0 ; i<ndim; i++)
+            _encode_longlong(dims[i], buffer);
+        if(type == NPY_UNICODE)
+            _encode_longlong(4, buffer);
+        WRITE_CHAR_OR_BAIL(ARRAY_END);
+    }
+    WRITE_OR_BAIL(PyArray_BYTES(arr), bytes*total);
+    Py_DECREF(arr);
     // no ARRAY_END since length was specified
 
     return 0;
@@ -708,7 +811,7 @@ int _bjdata_encode_value(PyObject *obj, _bjdata_encoder_buffer_t *buffer) {
     } else if (PyUnicode_Check(obj)) {
         BAIL_ON_NONZERO(_encode_PyUnicode(obj, buffer));
 #if PY_MAJOR_VERSION < 3
-    } else if (PyInt_Check(obj)) {
+    } else if (PyInt_Check(obj) && Py_TYPE(obj)!=NULL && strstr(Py_TYPE(obj)->tp_name, "numpy")==NULL) {
         BAIL_ON_NONZERO(_encode_PyInt(obj, buffer));
 #endif
     } else if (PyLong_Check(obj)) {
@@ -721,6 +824,14 @@ int _bjdata_encode_value(PyObject *obj, _bjdata_encoder_buffer_t *buffer) {
         BAIL_ON_NONZERO(_encode_PyBytes(obj, buffer));
     } else if (PyByteArray_Check(obj)) {
         BAIL_ON_NONZERO(_encode_PyByteArray(obj, buffer));
+    } else if (PyArray_CheckAnyScalar(obj)) {
+        RECURSE_AND_BAIL_ON_NONZERO(_encode_NDarray(obj, buffer), " while encoding a Numpy scalar");
+    } else if (PySequence_Check(obj)) {
+        if (PyArray_CheckExact(obj)) {
+            RECURSE_AND_BAIL_ON_NONZERO(_encode_NDarray(obj, buffer), " while encoding a Numpy ndarray");
+        } else {
+            RECURSE_AND_BAIL_ON_NONZERO(_encode_PySequence(obj, buffer), " while encoding an array");
+        }
     // order important since Mapping could also be Sequence
     } else if (PyMapping_Check(obj)
     // Unfortunately PyMapping_Check is no longer enough, see https://bugs.python.org/issue5945
@@ -728,9 +839,7 @@ int _bjdata_encode_value(PyObject *obj, _bjdata_encoder_buffer_t *buffer) {
                && PyObject_HasAttrString(obj, "items")
 #endif
     ) {
-        RECURSE_AND_BAIL_ON_NONZERO(_encode_PyMapping(obj, buffer), " while encoding a BJData object");
-    } else if (PySequence_Check(obj)) {
-        RECURSE_AND_BAIL_ON_NONZERO(_encode_PySequence(obj, buffer), " while encoding a BJData array");
+        RECURSE_AND_BAIL_ON_NONZERO(_encode_PyMapping(obj, buffer), " while encoding an object");
     } else if (NULL == obj) {
         PyErr_SetString(PyExc_RuntimeError, "Internal error - _bjdata_encode_value got NULL obj");
         goto bail;
@@ -748,7 +857,6 @@ bail:
     Py_XDECREF(newobj);
     return 1;
 }
-
 
 int _bjdata_encoder_init(void) {
     PyObject *tmp_module = NULL;

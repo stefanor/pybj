@@ -298,10 +298,26 @@ class TestEncodeDecodePlain(TestCase):  # pylint: disable=too-many-public-method
                     b'\x03' + b'\x02' + b'\x01'+ b'\x02'+ b'\x03'+ b'\x04'+ b'\x05'+ b'\x06')
         self.assertEqual((self.bjdloadb(raw_start)==ndarray([[1,2],[3,4],[5,6]], npint8)).all(), True)
 
+        self.assertEqual((self.bjdloadb(self.bjddumpb(np.uint8(9)))  == np.uint8(9)), True)
+        self.assertEqual((self.bjdloadb(self.bjddumpb(np.int8(9)))   == np.int8(9)), True)
+        self.assertEqual((self.bjdloadb(self.bjddumpb(np.uint16(6))) == np.uint16(6)), True)
+        self.assertEqual((self.bjdloadb(self.bjddumpb(np.int16(6)))  == np.int16(6)), True)
+        self.assertEqual((self.bjdloadb(self.bjddumpb(np.uint32(6))) == np.uint32(6)), True)
+        self.assertEqual((self.bjdloadb(self.bjddumpb(np.int32(6)))  == np.int32(6)), True)
+        self.assertEqual((self.bjdloadb(self.bjddumpb(np.uint64(6))) == np.uint64(6)), True)
+        self.assertEqual((self.bjdloadb(self.bjddumpb(np.int64(5)))  == np.int64(5)), True)
+
+        self.assertEqual((self.bjdloadb(self.bjddumpb(np.eye(2, dtype=np.uint8))) == np.eye(2, dtype=np.uint8)).all(), True)
+        self.assertEqual((self.bjdloadb(self.bjddumpb(np.eye(2, dtype=np.int16))) == np.eye(2, dtype=np.int16)).all(), True)
+
+        self.assertEqual((self.bjdloadb(self.bjddumpb(np.float16(2.2)))  == 16486), True)
+        self.assertEqual((self.bjdloadb(self.bjddumpb(np.float32(2.2)))  == np.float32(2.2)), True)
+
         raw_start = (ARRAY_START + CONTAINER_TYPE + TYPE_INT8 + CONTAINER_COUNT + ARRAY_START + \
                     TYPE_UINT8 + b'\x03' + TYPE_UINT16 + b'\x02' + b'\x00' + ARRAY_END + \
                     b'\x01'+ b'\x02'+ b'\x03'+ b'\x04'+ b'\x05'+ b'\x06')
         self.assertEqual((self.bjdloadb(raw_start)==ndarray([[1,2],[3,4],[5,6]], npint8)).all(), True)
+
     def test_array_fixed(self):
         raw_start = ARRAY_START + CONTAINER_TYPE + TYPE_INT8 + CONTAINER_COUNT + TYPE_UINT8
         self.assertEqual(self.bjdloadb(raw_start + b'\x00'), [])
